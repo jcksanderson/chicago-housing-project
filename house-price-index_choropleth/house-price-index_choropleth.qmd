@@ -2,7 +2,7 @@
 title: "Chicago Housing Market Data Exploration"
 format: gfm
 ---
-Sup!
+Sup
 ```{r}
 #| label: setup
 #| results: hide
