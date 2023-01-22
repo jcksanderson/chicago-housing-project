@@ -2,7 +2,9 @@
 title: "Chicago Housing Market Data Exploration"
 format: gfm
 ---
-Sup
+Step 1 is the load the libraries.  
+The knitr options are to set the root directory (for rendering) to the project's directory.  
+It's dumb that it isn't that by default.
 ```{r}
 #| label: setup
 #| results: hide
@@ -22,6 +24,8 @@ library(knitr)
 knitr::opts_knit$set(root.dir = here())
 ```
 
+Then we read in the shapefile of the PUMAs and render as a test.
+
 ```{r}
 il_pumas <- read_sf(here("SHP", 
                          "SHP_illinois_PUMAs/tl_2020_17_puma10.shp")
@@ -33,10 +37,14 @@ ggplot(chicago_pumas) +
   theme_void()
 ```
 
+The PUMA names don't match the CSV PUMA names, so I remove some of the fluff.
+
 ```{r}
 chicago_pumas$NAMELSAD10 <- str_match(chicago_pumas$NAMELSAD10, ".*\\-\\-(.*)")[,2]
 chicago_pumas$NAMELSAD10 <- str_remove(chicago_pumas$NAMELSAD10, " PUMA")
 ```
+
+Then we read in the CSV and filter to 2012+ and 2018+.
 
 ```{r}
 price_index_data <- read_csv(here("CSV", 
@@ -56,11 +64,15 @@ price_index_data_diff_2018 <- price_index_data %>%
   summarize(diff = max(Index) - min(Index))
 ```
 
+Merge the dataframes.
+
 ```{r}
 choropleth_data_2012 <- left_join(chicago_pumas, price_index_data_diff_2012, by = c("NAMELSAD10" = "PUMA"))
 
 choropleth_data_2018 <- left_join(chicago_pumas, price_index_data_diff_2018, by = c("NAMELSAD10" = "PUMA"))
 ```
+
+And plot!
 
 ```{r}
 #| label: Plot-2012
