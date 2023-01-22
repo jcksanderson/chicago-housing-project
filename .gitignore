@@ -1,0 +1,15 @@
+# R stuff
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+.DS_Store
+chicago-housing-project.Rproj
+
+# folders
+CSV/
+SHP/
+incomplete/
+
+# CSVs
+PROJ_new-construction_choropleth/CSV_chicago_building-permits.csv
