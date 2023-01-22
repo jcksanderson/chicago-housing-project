@@ -1,10 +1,10 @@
 Chicago Housing Market Data Exploration
 ================
 
-Step 1 is the load the libraries.  
-The knitr options are to set the root directory (for rendering) to the
+Step 1 is to load the libraries.  
+The knitr option is to set the root directory (for rendering) to the
 project’s directory.  
-It’s dumb that it isn’t that by default.
+(It’s dumb that it isn’t that by default.)
 
 ``` r
 # packages
@@ -37,14 +37,17 @@ ggplot(chicago_pumas) +
 ![](house-price-index_choropleth_files/figure-commonmark/unnamed-chunk-2-1.png)
 
 The PUMA names don’t match the CSV PUMA names, so I remove some of the
-fluff.
+fluff.  
+(The regex looks insane.)
 
 ``` r
 chicago_pumas$NAMELSAD10 <- str_match(chicago_pumas$NAMELSAD10, ".*\\-\\-(.*)")[,2]
 chicago_pumas$NAMELSAD10 <- str_remove(chicago_pumas$NAMELSAD10, " PUMA")
 ```
 
-Then we read in the CSV and filter to 2012+ and 2018+.
+Then we read in the CSV and filter to 2012+ and 2018+.  
+I figured 2012+ would be a good starting point since it was around the
+low after 2008, and 2018+ encompasses more recent development.
 
 ``` r
 price_index_data <- read_csv(here("CSV", 
