@@ -1,0 +1,241 @@
+---
+title: "price index, new construction, units"
+format: html
+execute:
+  fig-width: 8
+  fig-asp: 0.666
+  out-width: 100%
+  fig-align: "center"
+---
+```{r}
+#| label: setup
+#| results: hide
+#| message: false
+#| warning: false
+# packages
+library(tidyverse)
+library(sf)
+library(lubridate)
+library(data.table)
+library(glue)
+
+# directory setup
+library(here)
+library(knitr)
+
+# change root directory to Rproj file location;
+# that's where all files are pulled from
+knitr::opts_knit$set(root.dir = here())
+```
+
+```{r}
+#| label: Price Index Data
+price_index_data <- read_csv(here("CSV", "CSV_IHS-price-index-data.csv")) %>% 
+  gather(2:17, key = "PUMA", value = "Index") %>% 
+  mutate(Date = ymd(Date)) %>% 
+  mutate(PUMA = str_replace_all(.$PUMA, "Englewood/West Englewood", "Englewood, West Englewood")) %>% 
+  mutate(PUMA = str_replace_all(.$PUMA, "North & South Lawndale", "North Lawndale, South Lawndale")) %>% 
+  mutate(PUMA = str_replace_all(.$PUMA, "East & West Garfield Park", "East Garfield Park, West Garfield Park")) %>% 
+  mutate(PUMA = str_replace_all(.$PUMA, " & ", ", ")) 
+```
+```{r}
+#| label: New Construction Permits
+new_construction_permits <- fread(here("CSV", "CSV_chicago_building-permits.csv")) %>% 
+  select("PERMIT_TYPE", "ISSUE_DATE", "REPORTED_COST", "COMMUNITY_AREA", "XCOORDINATE", "YCOORDINATE", "LATITUDE", "LONGITUDE") %>% 
+  filter(PERMIT_TYPE == "PERMIT - NEW CONSTRUCTION") %>%
+  filter(!is.na(COMMUNITY_AREA)) %>% 
+  mutate(ISSUE_DATE = mdy(.$ISSUE_DATE)) %>% 
+  arrange(ISSUE_DATE)
+```
+
+
+```{r}
+#| label: 2012 Price Index Diff
+price_index_data_2012 <- price_index_data %>% 
+  filter(Date >= "2012-01-01")
+
+price_index_data_diff_2012 <- price_index_data_2012 %>% 
+  group_by(PUMA) %>% 
+  summarize(diff = last(Index) - first(Index))
+
+comm_area_vector <- c()
+for (i in 1:5) {
+  comm_area_vector[i] <-glue("community_area_{i}")
+}
+
+puma_and_area_diff_2012 <- price_index_data_diff_2012 %>% 
+  mutate(community_area = PUMA) %>% 
+  separate(., community_area, comm_area_vector, ", ") %>% 
+  pivot_longer(3:7) %>% 
+  drop_na()
+```
+
+
+```{r}
+#| label: 2012 Community Area Cumulative Permits
+new_constr_permits_2012 <- new_construction_permits %>% 
+  filter(ISSUE_DATE >= "2012-01-01")
+
+new_constr_permits_2012_cumu <- new_constr_permits_2012 %>% 
+  mutate(PERMIT_TYPE = "1") %>% 
+  group_by(COMMUNITY_AREA) %>% 
+  mutate(CUMULATIVE_PERMITS = cumsum(PERMIT_TYPE))
+
+comm_area_cumu_permits_2012 <- new_constr_permits_2012_cumu %>% 
+  group_by(COMMUNITY_AREA) %>% 
+  summarize(CUMULATIVE_PERMITS = last(CUMULATIVE_PERMITS)) %>% 
+  filter(COMMUNITY_AREA != 0)
+
+community_area_names <- read_csv(here("CSV", "CSV_community_area_names.csv"))
+comm_area_cumu_permits_2012 <- left_join(comm_area_cumu_permits_2012, community_area_names, by = c("COMMUNITY_AREA" = "Number"))
+```
+
+```{r}
+#| label: Cumulative New Construction Permits Plot
+ggplot(new_constr_permits_2012_cumu, aes(x = ISSUE_DATE, 
+                                      y = CUMULATIVE_PERMITS,
+                                      group = COMMUNITY_AREA)
+  ) +
+  geom_line(aes(color = CUMULATIVE_PERMITS),
+                show.legend = FALSE) + 
+  labs(
+    title = "Cumulative New Construction Permits Since 2012",
+    subtitle = "By Community Area",
+    x = "Date",
+    y = "Cumulative Permits Issued"
+  ) +
+  scale_color_viridis_c() +
+  theme(
+    plot.background = element_rect(fill = "gray10",
+                                   color = "gray10"),
+    panel.background = element_rect(color = "white",
+                                    linewidth = 2,
+                                    fill = NA),
+    panel.grid.minor = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text = element_text(family = "Space Grotesk",
+                             color = "white"),
+    axis.title = element_text(family = "Space Grotesk Bold",
+                              color = "white"),
+    plot.title = element_text(family = "Space Grotesk Bold",
+                              size = 20,
+                              color = "white"),
+    plot.subtitle = element_text(family = "Space Grotesk Bold",
+                                 size = 14,
+                                 color = "gray90")
+  ) 
+
+```
+
+```{r}
+#| label: 2012 Scatterplot
+scatterplot_data_2012 <- left_join(puma_and_area_diff_2012, comm_area_cumu_permits_2012, by = c("value" = "Name")) %>% 
+  group_by(PUMA) %>% 
+  summarize(total_permits = sum(CUMULATIVE_PERMITS), diff = mean(diff))
+
+ggplot(scatterplot_data_2012, aes(x = total_permits, y = diff)) + 
+  geom_point(color = "#6beeff") +
+  geom_smooth(method = "lm",
+              color = "red",
+              se = FALSE) + 
+  coord_cartesian(ylim = c(0, 300)) + 
+  labs(
+    title = "New Construction Permits vs. Housing Price Index",
+    subtitle = "2012-2022",
+    y = "Housing Price Index Difference",
+    x = "Total New Construction Permits"
+  ) +
+  theme(
+    plot.background = element_rect(fill = "gray10",
+                                   color = "gray10"),
+    panel.background = element_rect(color = "white",
+                                    linewidth = 2,
+                                    fill = NA),
+    panel.grid.minor = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text = element_text(family = "Space Grotesk",
+                             color = "white"),
+    axis.title = element_text(family = "Space Grotesk Bold",
+                              color = "white"),
+    plot.title = element_text(family = "Space Grotesk Bold",
+                              size = 20,
+                              color = "white"),
+    plot.subtitle = element_text(family = "Space Grotesk Bold",
+                                 size = 14,
+                                 color = "gray90")
+  ) 
+```
+
+```{r}
+#| label: 2018 Price Index Diff
+price_index_data_diff_2018 <- price_index_data %>% 
+  filter(Date >= "2018-01-01") %>% 
+  group_by(PUMA) %>% 
+  summarize(diff = last(Index) - first(Index))
+
+puma_and_area_diff_2018 <- price_index_data_diff_2018 %>% 
+  mutate(community_area = PUMA) %>% 
+  separate(., community_area, comm_area_vector, ", ") %>% 
+  pivot_longer(3:7) %>% 
+  drop_na()
+
+```
+
+```{r}
+#| label: 2018 Community Area Cumulative Permits
+new_constr_permits_2018 <- new_constr_permits_2012 %>% 
+  filter(ISSUE_DATE >= "2018-01-01")
+
+new_constr_permits_2018_cumu <- new_constr_permits_2018 %>% 
+  mutate(PERMIT_TYPE = "1") %>% 
+  group_by(COMMUNITY_AREA) %>% 
+  mutate(CUMULATIVE_PERMITS = cumsum(PERMIT_TYPE))
+
+comm_area_cumu_permits_2018 <- new_constr_permits_2018_cumu %>% 
+  group_by(COMMUNITY_AREA) %>% 
+  summarize(CUMULATIVE_PERMITS = last(CUMULATIVE_PERMITS)) %>% 
+  filter(COMMUNITY_AREA != 0)
+
+comm_area_cumu_permits_2018 <- left_join(comm_area_cumu_permits_2018, community_area_names, by = c("COMMUNITY_AREA" = "Number"))
+```
+
+```{r}
+#| label: 2018 Scatterplot
+scatterplot_data_2018 <- left_join(puma_and_area_diff_2018, comm_area_cumu_permits_2018, by = c("value" = "Name")) %>% 
+  group_by(PUMA) %>% 
+  summarize(total_permits = sum(CUMULATIVE_PERMITS), diff = mean(diff))
+
+ggplot(scatterplot_data_2018, aes(x = total_permits, y = diff)) + 
+  geom_point(color = "#6beeff") +
+  geom_smooth(method = "lm",
+              color = "red",
+              se = FALSE) + 
+  coord_cartesian(ylim = c(0, 300)) + 
+  labs(
+    title = "New Construction Permits vs. Housing Price Index",
+    subtitle = "2012-2022",
+    y = "Housing Price Index Difference",
+    x = "Total New Construction Permits"
+  ) +
+  theme(
+    plot.background = element_rect(fill = "gray10",
+                                   color = "gray10"),
+    panel.background = element_rect(color = "white",
+                                    linewidth = 2,
+                                    fill = NA),
+    panel.grid.minor = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text = element_text(family = "Space Grotesk",
+                             color = "white"),
+    axis.title = element_text(family = "Space Grotesk Bold",
+                              color = "white"),
+    plot.title = element_text(family = "Space Grotesk Bold",
+                              size = 20,
+                              color = "white"),
+    plot.subtitle = element_text(family = "Space Grotesk Bold",
+                                 size = 14,
+                                 color = "gray90")
+  ) 
+summary(lm(diff ~ total_permits, scatterplot_data_2018))
+```
+
