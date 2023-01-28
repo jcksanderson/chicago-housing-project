@@ -1,6 +1,6 @@
 ---
-title: "price index, new construction, units"
-format: html
+title: "Housing Price Index, New Construction, and Aver Units Scatterplot"
+format: gfm
 execute:
   fig-width: 8
   fig-asp: 0.666
@@ -142,8 +142,8 @@ ggplot(scatterplot_data_2012, aes(x = total_permits, y = diff)) +
   labs(
     title = "New Construction Permits vs. Housing Price Index",
     subtitle = "2012-2022",
-    y = "Housing Price Index Difference",
-    x = "Total New Construction Permits"
+    y = "Housing Price Index Increase",
+    x = "New Construction Permits Issued"
   ) +
   theme(
     plot.background = element_rect(fill = "gray10",
@@ -213,9 +213,9 @@ ggplot(scatterplot_data_2018, aes(x = total_permits, y = diff)) +
   coord_cartesian(ylim = c(0, 300)) + 
   labs(
     title = "New Construction Permits vs. Housing Price Index",
-    subtitle = "2012-2022",
-    y = "Housing Price Index Difference",
-    x = "Total New Construction Permits"
+    subtitle = "2018-2022",
+    y = "Housing Price Index Increase",
+    x = "New Construction Permits Issued"
   ) +
   theme(
     plot.background = element_rect(fill = "gray10",
@@ -238,4 +238,118 @@ ggplot(scatterplot_data_2018, aes(x = total_permits, y = diff)) +
   ) 
 summary(lm(diff ~ total_permits, scatterplot_data_2018))
 ```
+
+```{r}
+#| label: Housing Tract Centers & Average Units
+tract_housing_units <- read_sf(here("SHP", "SHP_chicago-tracts_housing-stock")) %>% 
+  select(geoid, 
+         name, 
+         geometry, 
+         total_units = B25024001, 
+         one_detached = B25024002, 
+         one_attached = B25024003, 
+         two = B25024004, 
+         three_or_four = B25024005, 
+         five_to_nine = B25024006, 
+         ten_to_nineteen = B25024007, 
+         twenty_to_fortynine = B25024008, 
+         fifty_plus = B25024009)
+
+tract_housing_centers <- tract_housing_units %>% 
+  mutate(average_units = (one_detached +
+                          one_attached +
+                          (two * 2) +
+                          (three_or_four * 3.5) +
+                          (five_to_nine * 7) +
+                          (ten_to_nineteen * 14.5) +
+                          (twenty_to_fortynine * 34.5) +
+                          (fifty_plus * 100)) / total_units) %>% 
+  mutate(center = st_centroid(geometry), .after = "geometry") %>% 
+  select(geoid, name, center, average_units)
+```
+
+```{r}
+#| label: PUMA Average Housing Units
+
+chicago_pumas <- read_sf(here("SHP", "SHP_illinois_PUMAs", "tl_2020_17_puma10.shp")) %>% 
+  filter(grepl("Chicago City", NAMELSAD10) & !grepl("Cook", NAMELSAD10)) %>% 
+  st_set_crs(st_crs(tract_housing_centers)) %>% 
+  mutate(NAMELSAD10 = str_match(.$NAMELSAD10, ".*\\-\\-(.*)")[,2]) %>% 
+  mutate(NAMELSAD10 = str_remove(.$NAMELSAD10, " PUMA")) %>% 
+ mutate(NAMELSAD10 = str_replace_all(.$NAMELSAD10, "Englewood/West Englewood", "Englewood, West Englewood")) %>% 
+  mutate(NAMELSAD10 = str_replace_all(.$NAMELSAD10, "North & South Lawndale", "North Lawndale, South Lawndale")) %>% 
+  mutate(NAMELSAD10 = str_replace_all(.$NAMELSAD10, "East & West Garfield Park", "East Garfield Park, West Garfield Park")) %>% 
+  mutate(NAMELSAD10 = str_replace_all(.$NAMELSAD10, " & ", ", ")) %>% 
+  mutate(STATEFP10 = seq(1:17))
+
+puma_id <- chicago_pumas %>% 
+  data.frame(.) %>% 
+  select(id = STATEFP10, name = NAMELSAD10)
+
+tracts_within <- st_within(tract_housing_centers, chicago_pumas, sparse = FALSE) %>% 
+  data.frame(.)
+
+puma_average_units <- cbind(tract_housing_centers, tracts_within) %>% 
+  pivot_longer(4:20, names_to = "PUMA", values_to = "within") %>% 
+  filter(within == TRUE) %>% 
+  select(-within) %>% 
+  group_by(PUMA) %>% 
+  mutate(average_units = mean(average_units, na.rm = TRUE)) %>% 
+  data.frame(.) %>% 
+  select(id = PUMA, average_units) %>% 
+  distinct() %>% 
+  mutate(id = as.double(str_remove_all(id, "X"))) %>% 
+  arrange(id) %>% 
+  left_join(., puma_id, by = c("id" = "id")) %>% 
+  select(PUMA = name, average_units)
+```
+
+```{r}
+#| label: 2012 Scatter
+avg_units_scatter_2012 <- left_join(scatterplot_data_2012, puma_average_units, by = c("PUMA" = "PUMA"))
+
+ggplot(avg_units_scatter_2012,
+       aes(x = total_permits, 
+           y = diff,
+           size = average_units, 
+           color = average_units)) +
+  geom_point() +
+  labs(
+    title = "New Construction Permits vs. Housing Price Index",
+    subtitle = "2012-2022, Point Size & Color as Average Units per Building",
+    color = "Average Units per Building",
+    x = "New Construction Permits Issued",
+    y = "Housing Price Index Increase"
+  ) +
+  scale_color_viridis_b(option = "viridis", breaks = c(5, 10, 20, 40)) +
+  scale_size(guide = "none") +
+  theme(
+    plot.background = element_rect(fill = "gray10",
+                                   color = "gray10"),
+    panel.background = element_rect(color = "white",
+                                    linewidth = 2,
+                                    fill = NA),
+    panel.grid.minor = element_blank(),
+    axis.ticks = element_blank(),
+    axis.text = element_text(family = "Space Grotesk",
+                             color = "white"),
+    axis.title = element_text(family = "Space Grotesk Bold",
+                              color = "white"),
+    plot.title = element_text(family = "Space Grotesk Bold",
+                              size = 20,
+                              color = "white"),
+    plot.subtitle = element_text(family = "Space Grotesk Bold",
+                                 size = 14,
+                                 color = "gray90"),
+    legend.position = "bottom",
+    legend.background = element_rect(fill = "gray10"),
+    legend.title = element_text(family = "Space Grotesk",
+                                color = "white",
+                                vjust = 0.8),
+    legend.text = element_text(family = "Space Grotesk",
+                             color = "white"),
+    legend.margin = margin(0, 0, 0, 0)
+  ) 
+```
+
 
