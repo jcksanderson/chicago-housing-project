@@ -208,7 +208,7 @@ Now it’s time for the census data. Step one is importing the shapefile
 and making the column names understandable. I used a very crude method
 for finding the average of each tract, simply by multiplying the number
 in each column with the column’s average units (e.g. `[5 + 9] / 2`),
-then dividing by the total units. Is it perfect? No. But it does capture
+then dividing by the total units. Is it perfect? No. But it does capture
 the bigger picture, which works for basic exploratory analysis. I then
 added a column which had the center of each tract, for future use.
 
@@ -399,8 +399,6 @@ ggplot(avg_units_scatter_2012,
 ![](price-construction-units_scatter_files/figure-commonmark/2012%20Scatter-1.png)
 
 And the same goes for 2018 (the code is hidden).
-
-    `geom_smooth()` using formula = 'y ~ x'
 
 ![](price-construction-units_scatter_files/figure-commonmark/2018%20Scatter-1.png)
 

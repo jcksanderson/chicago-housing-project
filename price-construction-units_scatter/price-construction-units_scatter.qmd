@@ -7,18 +7,18 @@ execute:
   out-width: 100%
   fig-align: "center"
 ---
+
 ## Introduction
 
-A common talking point when discussing housing policy is about gentrification and development. 
-Specifically, many people argue that new construction fuels increases in housing prices, as typified by the "gentrification building."
-But basic principles of supply and demand should suggest that if the supply is high enough, no matter the demand, the prices shouldn't increase.
+A common talking point when discussing housing policy is about gentrification and development.
+Specifically, many people argue that new construction fuels increases in housing prices, as typified by the "gentrification building." But basic principles of supply and demand should suggest that if the supply is high enough, no matter the demand, the prices shouldn't increase.
 So does new construction fuel housing price increases, or is there more to the story?
 
 The easiest way to find if a pattern exists here is simply to look for patterns in data.
 DePaul University's Institute for Housing Studies provides data on housing price index changes in Chicago Pubic Use Microdata Areas (PUMAs) and the Chicago Data Portal provides a list of building permits issued in the city, both of which are quantifications of the metrics we want to measure.
 I also have pulled data from the US Census about the average units per residential building in Chicago's census tracts, to see if there is any differences between the PUMAs in that regard.
 
-***
+------------------------------------------------------------------------
 
 ## Code
 
@@ -47,7 +47,8 @@ knitr::opts_knit$set(root.dir = here())
 
 ### Import Data
 
-I then imported the price index data. I had already cleaned it up a bit in a Google Sheet, but to get all the PUMA names in full I turned the /'s and &'s to commas.
+I then imported the price index data.
+I had already cleaned it up a bit in a Google Sheet, but to get all the PUMA names in full I turned the /'s and &'s to commas.
 
 ```{r}
 #| label: Price Index Data
@@ -74,12 +75,13 @@ new_construction_permits <- fread(here("CSV", "CSV_chicago_building-permits.csv"
   mutate(ISSUE_DATE = mdy(.$ISSUE_DATE)) %>% 
   arrange(ISSUE_DATE)
 ```
+
 ### Calculations
 
 After that I calculated the increase in the housing price index from 2012 to 2022.
 The first step is to filter the price index data to be 2012 onward, after which we can group by the PUMA and subtract the first (2012) from the last (2022).
 
-This data, though, is still in terms of each PUMA, and the permit data is in terms of community areas. 
+This data, though, is still in terms of each PUMA, and the permit data is in terms of community areas.
 To aid the future joining of the dataframes, I added extra columns that listed the community areas within each PUMA, then used `pivot_longer()` to lengthen the dataframe (see result below).
 
 ```{r}
@@ -180,10 +182,12 @@ scatterplot_data_2018 <- left_join(puma_and_area_diff_2018, comm_area_cumu_permi
 
 ### Census Data
 
-Now it's time for the census data. 
+Now it's time for the census data.
 Step one is importing the shapefile and making the column names understandable.
 I used a very crude method for finding the average of each tract, simply by multiplying the number in each column with the column's average units (e.g. `[5 + 9] / 2`), then dividing by the total units.
-Is it perfect? No. But it does capture the bigger picture, which works for basic exploratory analysis.
+Is it perfect?
+No.
+But it does capture the bigger picture, which works for basic exploratory analysis.
 I then added a column which had the center of each tract, for future use.
 
 ```{r}
@@ -334,6 +338,7 @@ And the same goes for 2018 (the code is hidden).
 ```{r}
 #| label: 2018 Scatter
 #| echo: false
+#| message: false
 avg_units_scatter_2018 <- left_join(scatterplot_data_2018, puma_average_units, by = c("PUMA" = "PUMA"))
 
 ggplot(
@@ -398,7 +403,7 @@ ggplot(
   ) 
 ```
 
-***
+------------------------------------------------------------------------
 
 ## Discussion
 
@@ -414,17 +419,17 @@ summary(lm(diff ~ total_permits*average_units, data = avg_units_scatter_2018))
 summary(lm(diff ~ total_permits, data = avg_units_scatter_2018))
 ```
 
-The statistics (hidden) also give somewhat strong explanatory power to the number of permits and average units. 
+The statistics (hidden) also give somewhat strong explanatory power to the number of permits and average units.
 Both 2012 and 2018 having multiple r-squared values over 0.3, and the p-value on just the permit's coefficient in 2018 is a technically significant 0.0467.
 But in all likelihood, there are too many variables not controlled when looking at just these three datasets, so visualizations are likely a better option for finding trends.
 
-***
+------------------------------------------------------------------------
 
 ## Sources
 
-[IHS Price Index](https://price-index.housingstudies.org/)  
-[Chicago Building Permits](https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu)  
-[Building Unit Census Data](https://censusreporter.org/data/table/?table=B25024&geo_ids=16000US1714000,140|16000US1714000&primary_geo_id=16000US1714000)
+[IHS Price Index](https://price-index.housingstudies.org/)\
+[Chicago Building Permits](https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu)\
+[Building Unit Census Data](https://censusreporter.org/data/table/?table=B25024&geo_ids=16000US1714000,140%7C16000US1714000&primary_geo_id=16000US1714000)
 
 ## Bonus
 
