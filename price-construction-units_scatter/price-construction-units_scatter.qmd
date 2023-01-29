@@ -1,5 +1,5 @@
 ---
-title: "Housing Price Index, New Construction, and Aver Units Scatterplot"
+title: "Housing Price Index, New Construction, and Average Units Scatterplot"
 format: gfm
 execute:
   fig-width: 8
@@ -7,6 +7,23 @@ execute:
   out-width: 100%
   fig-align: "center"
 ---
+## Introduction
+
+A common talking point when discussing housing policy is about gentrification and development. 
+Specifically, many people argue that new construction fuels increases in housing prices, as typified by the "gentrification building."
+But basic principles of supply and demand should suggest that if the supply is high enough, no matter the demand, the prices shouldn't increase.
+So does new construction fuel housing price increases, or is there more to the story?
+
+The easiest way to find if a pattern exists here is simply to look for patterns in data.
+DePaul University's Institute for Housing Studies provides data on housing price index changes in Chicago Pubic Use Microdata Areas (PUMAs) and the Chicago Data Portal provides a list of building permits issued in the city, both of which are quantifications of the metrics we want to measure.
+I also have pulled data from the US Census about the average units per residential building in Chicago's census tracts, to see if there is any differences between the PUMAs in that regard.
+
+***
+
+## Code
+
+The first step was to import packages (and change the knitr root directory because there's no easy way to do it in Quarto as of now).
+
 ```{r}
 #| label: setup
 #| results: hide
@@ -28,8 +45,13 @@ library(knitr)
 knitr::opts_knit$set(root.dir = here())
 ```
 
+### Import Data
+
+I then imported the price index data. I had already cleaned it up a bit in a Google Sheet, but to get all the PUMA names in full I turned the /'s and &'s to commas.
+
 ```{r}
 #| label: Price Index Data
+#| message: FALSE
 price_index_data <- read_csv(here("CSV", "CSV_IHS-price-index-data.csv")) %>% 
   gather(2:17, key = "PUMA", value = "Index") %>% 
   mutate(Date = ymd(Date)) %>% 
@@ -38,8 +60,13 @@ price_index_data <- read_csv(here("CSV", "CSV_IHS-price-index-data.csv")) %>%
   mutate(PUMA = str_replace_all(.$PUMA, "East & West Garfield Park", "East Garfield Park, West Garfield Park")) %>% 
   mutate(PUMA = str_replace_all(.$PUMA, " & ", ", ")) 
 ```
+
+Next I imported the new construction permit dataset as a CSV, downloaded from the Chicago Data Portal (it's a giant file so it takes a while).
+To clean it up, I filtered the permit to be for new construction and turned the date column into the ISO-8601 standard with Lubridate.
+
 ```{r}
 #| label: New Construction Permits
+#| message: FALSE
 new_construction_permits <- fread(here("CSV", "CSV_chicago_building-permits.csv")) %>% 
   select("PERMIT_TYPE", "ISSUE_DATE", "REPORTED_COST", "COMMUNITY_AREA", "XCOORDINATE", "YCOORDINATE", "LATITUDE", "LONGITUDE") %>% 
   filter(PERMIT_TYPE == "PERMIT - NEW CONSTRUCTION") %>%
@@ -47,7 +74,13 @@ new_construction_permits <- fread(here("CSV", "CSV_chicago_building-permits.csv"
   mutate(ISSUE_DATE = mdy(.$ISSUE_DATE)) %>% 
   arrange(ISSUE_DATE)
 ```
+### Calculations
 
+After that I calculated the increase in the housing price index from 2012 to 2022.
+The first step is to filter the price index data to be 2012 onward, after which we can group by the PUMA and subtract the first (2012) from the last (2022).
+
+This data, though, is still in terms of each PUMA, and the permit data is in terms of community areas. 
+To aid the future joining of the dataframes, I added extra columns that listed the community areas within each PUMA, then used `pivot_longer()` to lengthen the dataframe (see result below).
 
 ```{r}
 #| label: 2012 Price Index Increase
@@ -58,6 +91,7 @@ price_index_data_diff_2012 <- price_index_data_2012 %>%
   group_by(PUMA) %>% 
   summarize(diff = last(Index) - first(Index))
 
+# for concrete naming convention during the separate()
 comm_area_vector <- c()
 for (i in 1:5) {
   comm_area_vector[i] <-glue("community_area_{i}")
@@ -68,11 +102,17 @@ puma_and_area_diff_2012 <- price_index_data_diff_2012 %>%
   separate(., community_area, comm_area_vector, ", ") %>% 
   pivot_longer(3:7) %>% 
   drop_na()
+
+head(puma_and_area_diff_2012)
 ```
 
+After completing the price index manipulations, I started working with the new construction permits.
+First is filtering the dates to post-2012, then making a column of 1's so I could use `cumsum()` and create a cumulative permits column.
+Finally, I added the names of the community areas to the dataframe.
 
 ```{r}
 #| label: 2012 Community Area Cumulative Permits
+#| message: FALSE
 new_constr_permits_2012 <- new_construction_permits %>% 
   filter(ISSUE_DATE >= "2012-01-01")
 
@@ -89,6 +129,8 @@ comm_area_cumu_permits_2012 <- new_constr_permits_2012_cumu %>%
 community_area_names <- read_csv(here("CSV", "CSV_community_area_names.csv"))
 comm_area_cumu_permits_2012 <- left_join(comm_area_cumu_permits_2012, community_area_names, by = c("COMMUNITY_AREA" = "Number"))
 ```
+
+And the same steps apply for the 2018 data!
 
 ```{r}
 #| label: 2018 Price Index Increase
@@ -122,6 +164,8 @@ comm_area_cumu_permits_2018 <- new_constr_permits_2018_cumu %>%
 comm_area_cumu_permits_2018 <- left_join(comm_area_cumu_permits_2018, community_area_names, by = c("COMMUNITY_AREA" = "Number"))
 ```
 
+To get the data that will be used to plot each scatterplot point, all that must be done is a `left_join()` for each of the years.
+
 ```{r}
 #| label: 2012 & 2018 Scatterplot Data
 scatterplot_data_2012 <- left_join(puma_and_area_diff_2012, comm_area_cumu_permits_2012, by = c("value" = "Name")) %>% 
@@ -133,9 +177,17 @@ scatterplot_data_2018 <- left_join(puma_and_area_diff_2018, comm_area_cumu_permi
   summarize(total_permits = sum(CUMULATIVE_PERMITS), diff = mean(diff))
 ```
 
+### Census Data
+
+Now it's time for the census data. 
+Step one is importing the shapefile and making the column names understandable.
+I used a very crude method for finding the average of each tract, simply by multiplying the number in each column with the column's average units (e.g. `[5 + 9] / 2`), then dividing by the total units.
+Is it perfect? No. But it does capture the bigger picture, which works for basic exploratory analysis.
+I then added a column which had the center of each tract, for future use.
+
 ```{r}
 #| label: Housing Tract Centers & Average Units
-tract_housing_units <- read_sf(here("SHP", "SHP_chicago-tracts_housing-stock")) %>% 
+tract_housing_units <- read_sf(here("SHP", "SHP_chicago-tracts_housing-stock"), quiet = TRUE) %>% 
   select(geoid, 
          name, 
          geometry, 
@@ -160,10 +212,15 @@ tract_housing_centers <- tract_housing_units %>%
                           (fifty_plus * 100)) / total_units) %>% 
   mutate(center = st_centroid(geometry), .after = "geometry") %>% 
   select(geoid, name, center, average_units)
+
+head(tract_housing_centers)
 ```
 
+I imported the Illinois PUMAs shapefile, limited them to Chicago, fixed their names, and numbered them (I saved just PUMA IDs and names for later).
+Then I used `st_within()` to calculate what census tracts are inside which PUMAs.
+
 ```{r}
-#| label: PUMA Average Housing Units
+#| label: Tracts within PUMAs
 chicago_pumas <- read_sf(here("SHP", "SHP_illinois_PUMAs", "tl_2020_17_puma10.shp")) %>% 
   filter(grepl("Chicago City", NAMELSAD10) & !grepl("Cook", NAMELSAD10)) %>% 
   st_set_crs(st_crs(tract_housing_centers)) %>% 
@@ -176,26 +233,38 @@ chicago_pumas <- read_sf(here("SHP", "SHP_illinois_PUMAs", "tl_2020_17_puma10.sh
   mutate(STATEFP10 = seq(1:17))
 
 puma_id <- chicago_pumas %>% 
-  data.frame(.) %>% 
+  tibble(.) %>% 
   select(id = STATEFP10, name = NAMELSAD10)
 
 tracts_within <- st_within(tract_housing_centers, chicago_pumas, sparse = FALSE) %>% 
   data.frame(.)
+```
 
+The following is probably the most insane code chunk in this file.
+I binded the tract center and tract within data together, then melted it and selected the rows only when the tract is within the PUMA.
+Next I took the mean of the average units per PUMA and added the PUMA names to their IDs (which is why I kept just the names and IDs).
+
+```{r}
+#label: PUMA Average Housing Units
 puma_average_units <- cbind(tract_housing_centers, tracts_within) %>% 
   pivot_longer(4:20, names_to = "PUMA", values_to = "within") %>% 
   filter(within == TRUE) %>% 
-  select(-within) %>% 
   group_by(PUMA) %>% 
   mutate(average_units = mean(average_units, na.rm = TRUE)) %>% 
-  data.frame(.) %>% 
+  tibble(.) %>% 
   select(id = PUMA, average_units) %>% 
   distinct() %>% 
   mutate(id = as.double(str_remove_all(id, "X"))) %>% 
-  arrange(id) %>% 
   left_join(., puma_id, by = c("id" = "id")) %>% 
-  select(PUMA = name, average_units)
+  select(PUMA = name, average_units) %>% 
+  tbl_df()
+
+head(puma_average_units)
 ```
+
+### Plots
+
+All of that done, it's as simple as using a join on the scatterplot data and average units to finally get the plot!
 
 ```{r}
 #| label: 2012 Scatter
@@ -325,6 +394,38 @@ ggplot(
   ) 
 ```
 
+***
+
+## Discussion
+
+So it seems that the amount of new construction permits issued has no effect or even a negative effect on the increase in housing prices.
+This finding is more consistent with the supply and demand idea, as more units should mean less price gouging.
+
+```{r}
+#| label: Statistics
+#| message: FALSE
+summary(lm(diff ~ total_permits*average_units, data = avg_units_scatter_2012))
+summary(lm(diff ~ total_permits*average_units, data = avg_units_scatter_2018))
+
+summary(lm(diff ~ total_permits, data = avg_units_scatter_2018))
+```
+
+The statistics (hidden) also give somewhat strong explanatory power to the number of permits and average units. 
+Both 2012 and 2018 having multiple r-squared values over 0.3, and the p-value on just the permit's coefficient in 2018 is a technically significant 0.0467.
+But in all likelihood, there are too many variables not controlled when looking at just these three datasets, so visualizations are likely a better option for finding trends.
+
+***
+
+## Sources
+
+[IHS Price Index](https://price-index.housingstudies.org/)
+[Chicago Building Permits](https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu)
+[Building Unit Census Data](https://censusreporter.org/data/table/?table=B25024&geo_ids=16000US1714000,140|16000US1714000&primary_geo_id=16000US1714000)
+
+## Bonus
+
+(Here's a bonus plot of the cumulative permits too.)
+
 ```{r}
 #| label: Cumulative New Construction Permits Plot
 ggplot(new_constr_permits_2012_cumu, aes(x = ISSUE_DATE, 
@@ -359,5 +460,4 @@ ggplot(new_constr_permits_2012_cumu, aes(x = ISSUE_DATE,
                                  size = 14,
                                  color = "gray90")
   ) 
-
 ```
