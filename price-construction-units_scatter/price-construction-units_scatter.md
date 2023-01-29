@@ -348,7 +348,7 @@ ggplot(avg_units_scatter_2012,
     alpha = 0.5
   ) +
   labs(
-    title = "New Construction Permits vs. Housing Price Index",
+    title = "New Construction Permits vs. Housing Price Increase",
     subtitle = "2012-2022, Point Size & Color as Average Units per Building",
     color = "Average Units per Building",
     x = "New Construction Permits Issued",
@@ -374,10 +374,10 @@ ggplot(avg_units_scatter_2012,
     axis.title = element_text(family = "Space Grotesk Bold",
                               color = "white"),
     plot.title = element_text(family = "Space Grotesk Bold",
-                              size = 20,
+                              size = 18,
                               color = "white"),
     plot.subtitle = element_text(family = "Space Grotesk Bold",
-                                 size = 14,
+                                 size = 13,
                                  color = "gray90"),
     legend.position = "bottom",
     legend.background = element_rect(fill = "gray10"),
@@ -417,7 +417,7 @@ ggplot(
     ylim = c(0, 300)
   ) +
   labs(
-    title = "New Construction Permits vs. Housing Price Index",
+    title = "New Construction Permits vs. Housing Price Increase",
     subtitle = "2018-2022, Point Size & Color as Average Units per Building",
     color = "Average Units per Building",
     x = "New Construction Permits Issued",
@@ -443,10 +443,10 @@ ggplot(
     axis.title = element_text(family = "Space Grotesk Bold",
                               color = "white"),
     plot.title = element_text(family = "Space Grotesk Bold",
-                              size = 20,
+                              size = 18,
                               color = "white"),
     plot.subtitle = element_text(family = "Space Grotesk Bold",
-                                 size = 14,
+                                 size = 13,
                                  color = "gray90"),
     legend.position = "bottom",
     legend.background = element_rect(fill = "gray10"),
