@@ -348,17 +348,24 @@ ggplot(avg_units_scatter_2012,
   ) +
   labs(
     title = "New Construction Permits vs. Housing Price Increase",
-    subtitle = "Chicago - 2012-2022, Point Size & Color as Average Units per Building",
+    subtitle = "In Chicago's Public Use Microdata Areas",
     color = "Average Units per Building",
     x = "New Construction Permits Issued",
-    y = "Housing Price Index Increase"
+    y = "Housing Price Index Increase",
+    caption = "2012-2022"
   ) +
-  scale_color_viridis_b(
-    option = "viridis", 
-    breaks = c(5, 10, 20, 40)
+  scale_color_viridis_c(
+    name = "Average Housing Units per Building",
+    breaks = c(5, 10, 20, 30, 40)
   ) +
-  scale_size(
-    guide = "none"
+  scale_size_continuous(
+    name = "Average Housing Units per Building",
+    range = c(1, 10),
+    breaks = c(5, 10, 20, 30, 40)
+  ) +
+  guides(
+    color = "legend",
+    size = "legend"
   ) +
   theme(
     plot.background = element_rect(fill = "gray10",
@@ -378,6 +385,9 @@ ggplot(avg_units_scatter_2012,
     plot.subtitle = element_text(family = "Space Grotesk Bold",
                                  size = 13,
                                  color = "gray90"),
+    plot.caption = element_text(family = "Space Grotesk Bold",
+                                 size = 10,
+                                 color = "gray90"),
     legend.position = "bottom",
     legend.background = element_rect(fill = "gray10"),
     legend.title = element_text(family = "Space Grotesk",
@@ -385,7 +395,8 @@ ggplot(avg_units_scatter_2012,
                                 vjust = 0.8),
     legend.text = element_text(family = "Space Grotesk",
                              color = "white"),
-    legend.margin = margin(0, 0, 0, 0)
+    legend.margin = margin(0, 0, 0, 0),
+    legend.key = element_blank(),
   ) 
 ```
 
