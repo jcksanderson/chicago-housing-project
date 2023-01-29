@@ -275,12 +275,7 @@ chicago_pumas <- read_sf(here("SHP", "SHP_illinois_PUMAs", "tl_2020_17_puma10.sh
   mutate(NAMELSAD10 = str_replace_all(.$NAMELSAD10, "East & West Garfield Park", "East Garfield Park, West Garfield Park")) %>% 
   mutate(NAMELSAD10 = str_replace_all(.$NAMELSAD10, " & ", ", ")) %>% 
   mutate(STATEFP10 = seq(1:17))
-```
 
-    Warning: st_crs<- : replacing crs does not reproject data; use st_transform for
-    that
-
-``` r
 puma_id <- chicago_pumas %>% 
   tibble(.) %>% 
   select(id = STATEFP10, name = NAMELSAD10)
@@ -289,9 +284,9 @@ tracts_within <- st_within(tract_housing_centers, chicago_pumas, sparse = FALSE)
   data.frame(.)
 ```
 
-The following is probably the most insane code chunk in this file. I
-binded the tract center and tract within data together, then melted it
-and selected the rows only when the tract is within the PUMA. Next I
+The following is probably the most insane code chunk in this file.  
+I bound the tract center and tract within data together, then melted it
+and selected the rows only when the tract is within the PUMA. Then I
 took the mean of the average units per PUMA and added the PUMA names to
 their IDs (which is why I kept just the names and IDs).
 
@@ -353,7 +348,7 @@ ggplot(avg_units_scatter_2012,
   ) +
   labs(
     title = "New Construction Permits vs. Housing Price Increase",
-    subtitle = "2012-2022, Point Size & Color as Average Units per Building",
+    subtitle = "Chicago - 2012-2022, Point Size & Color as Average Units per Building",
     color = "Average Units per Building",
     x = "New Construction Permits Issued",
     y = "Housing Price Index Increase"

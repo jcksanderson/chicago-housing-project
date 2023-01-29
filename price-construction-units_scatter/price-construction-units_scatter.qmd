@@ -226,6 +226,7 @@ Then I used `st_within()` to calculate what census tracts are inside which PUMAs
 
 ```{r}
 #| label: Tracts within PUMAs
+#| warning: false
 chicago_pumas <- read_sf(here("SHP", "SHP_illinois_PUMAs", "tl_2020_17_puma10.shp")) %>% 
   filter(grepl("Chicago City", NAMELSAD10) & !grepl("Cook", NAMELSAD10)) %>% 
   st_set_crs(st_crs(tract_housing_centers)) %>% 
@@ -245,9 +246,9 @@ tracts_within <- st_within(tract_housing_centers, chicago_pumas, sparse = FALSE)
   data.frame(.)
 ```
 
-The following is probably the most insane code chunk in this file.
-I binded the tract center and tract within data together, then melted it and selected the rows only when the tract is within the PUMA.
-Next I took the mean of the average units per PUMA and added the PUMA names to their IDs (which is why I kept just the names and IDs).
+The following is probably the most insane code chunk in this file.  
+I bound the tract center and tract within data together, then melted it and selected the rows only when the tract is within the PUMA.
+Then I took the mean of the average units per PUMA and added the PUMA names to their IDs (which is why I kept just the names and IDs).
 
 ```{r}
 #label: PUMA Average Housing Units
@@ -292,7 +293,7 @@ ggplot(avg_units_scatter_2012,
   ) +
   labs(
     title = "New Construction Permits vs. Housing Price Increase",
-    subtitle = "2012-2022, Point Size & Color as Average Units per Building",
+    subtitle = "Chicago - 2012-2022, Point Size & Color as Average Units per Building",
     color = "Average Units per Building",
     x = "New Construction Permits Issued",
     y = "Housing Price Index Increase"
@@ -362,7 +363,7 @@ ggplot(
   ) +
   labs(
     title = "New Construction Permits vs. Housing Price Increase",
-    subtitle = "2018-2022, Point Size & Color as Average Units per Building",
+    subtitle = "Chicago - 2018-2022, Point Size & Color as Average Units per Building",
     color = "Average Units per Building",
     x = "New Construction Permits Issued",
     y = "Housing Price Index Increase"
