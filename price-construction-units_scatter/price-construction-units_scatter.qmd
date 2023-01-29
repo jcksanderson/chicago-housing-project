@@ -51,7 +51,7 @@ I then imported the price index data. I had already cleaned it up a bit in a Goo
 
 ```{r}
 #| label: Price Index Data
-#| message: FALSE
+#| message: false
 price_index_data <- read_csv(here("CSV", "CSV_IHS-price-index-data.csv")) %>% 
   gather(2:17, key = "PUMA", value = "Index") %>% 
   mutate(Date = ymd(Date)) %>% 
@@ -66,7 +66,7 @@ To clean it up, I filtered the permit to be for new construction and turned the 
 
 ```{r}
 #| label: New Construction Permits
-#| message: FALSE
+#| message: false
 new_construction_permits <- fread(here("CSV", "CSV_chicago_building-permits.csv")) %>% 
   select("PERMIT_TYPE", "ISSUE_DATE", "REPORTED_COST", "COMMUNITY_AREA", "XCOORDINATE", "YCOORDINATE", "LATITUDE", "LONGITUDE") %>% 
   filter(PERMIT_TYPE == "PERMIT - NEW CONSTRUCTION") %>%
@@ -84,6 +84,7 @@ To aid the future joining of the dataframes, I added extra columns that listed t
 
 ```{r}
 #| label: 2012 Price Index Increase
+#| warning: false
 price_index_data_2012 <- price_index_data %>% 
   filter(Date >= "2012-01-01")
 
@@ -112,7 +113,6 @@ Finally, I added the names of the community areas to the dataframe.
 
 ```{r}
 #| label: 2012 Community Area Cumulative Permits
-#| message: FALSE
 new_constr_permits_2012 <- new_construction_permits %>% 
   filter(ISSUE_DATE >= "2012-01-01")
 
@@ -134,6 +134,7 @@ And the same steps apply for the 2018 data!
 
 ```{r}
 #| label: 2018 Price Index Increase
+#| warning: false
 price_index_data_diff_2018 <- price_index_data %>% 
   filter(Date >= "2018-01-01") %>% 
   group_by(PUMA) %>% 
@@ -328,8 +329,11 @@ ggplot(avg_units_scatter_2012,
   ) 
 ```
 
+And the same goes for 2018 (the code is hidden).
+
 ```{r}
 #| label: 2018 Scatter
+#| echo: false
 avg_units_scatter_2018 <- left_join(scatterplot_data_2018, puma_average_units, by = c("PUMA" = "PUMA"))
 
 ggplot(
@@ -403,7 +407,7 @@ This finding is more consistent with the supply and demand idea, as more units s
 
 ```{r}
 #| label: Statistics
-#| message: FALSE
+#| results: hide
 summary(lm(diff ~ total_permits*average_units, data = avg_units_scatter_2012))
 summary(lm(diff ~ total_permits*average_units, data = avg_units_scatter_2018))
 
@@ -418,8 +422,8 @@ But in all likelihood, there are too many variables not controlled when looking 
 
 ## Sources
 
-[IHS Price Index](https://price-index.housingstudies.org/)
-[Chicago Building Permits](https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu)
+[IHS Price Index](https://price-index.housingstudies.org/)  
+[Chicago Building Permits](https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu)  
 [Building Unit Census Data](https://censusreporter.org/data/table/?table=B25024&geo_ids=16000US1714000,140|16000US1714000&primary_geo_id=16000US1714000)
 
 ## Bonus

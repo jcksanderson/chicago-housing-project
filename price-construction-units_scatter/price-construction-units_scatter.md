@@ -107,12 +107,7 @@ puma_and_area_diff_2012 <- price_index_data_diff_2012 %>%
   separate(., community_area, comm_area_vector, ", ") %>% 
   pivot_longer(3:7) %>% 
   drop_na()
-```
 
-    Warning: Expected 5 pieces. Missing pieces filled with `NA` in 12 rows [1, 3, 4,
-    5, 6, 7, 8, 9, 10, 12, 15, 16].
-
-``` r
 head(puma_and_area_diff_2012)
 ```
 
@@ -147,6 +142,18 @@ comm_area_cumu_permits_2012 <- new_constr_permits_2012_cumu %>%
   filter(COMMUNITY_AREA != 0)
 
 community_area_names <- read_csv(here("CSV", "CSV_community_area_names.csv"))
+```
+
+    Rows: 77 Columns: 2
+    ── Column specification ────────────────────────────────────────────────────────
+    Delimiter: ","
+    chr (1): Name
+    dbl (1): Number
+
+    ℹ Use `spec()` to retrieve the full column specification for this data.
+    ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
+
+``` r
 comm_area_cumu_permits_2012 <- left_join(comm_area_cumu_permits_2012, community_area_names, by = c("COMMUNITY_AREA" = "Number"))
 ```
 
@@ -164,9 +171,6 @@ puma_and_area_diff_2018 <- price_index_data_diff_2018 %>%
   pivot_longer(3:7) %>% 
   drop_na()
 ```
-
-    Warning: Expected 5 pieces. Missing pieces filled with `NA` in 12 rows [1, 3, 4,
-    5, 6, 7, 8, 9, 10, 12, 15, 16].
 
 ``` r
 new_constr_permits_2018 <- new_constr_permits_2012 %>% 
@@ -394,70 +398,7 @@ ggplot(avg_units_scatter_2012,
 
 ![](price-construction-units_scatter_files/figure-commonmark/2012%20Scatter-1.png)
 
-``` r
-avg_units_scatter_2018 <- left_join(scatterplot_data_2018, puma_average_units, by = c("PUMA" = "PUMA"))
-
-ggplot(
-  avg_units_scatter_2018,
-  aes(x = total_permits, 
-      y = diff)
-  ) +
-  geom_point(
-    aes(size = average_units,
-        color = average_units)
-  ) +
-  stat_smooth(
-    geom = "line",
-    method = "lm",
-    color = "red",
-    linewidth = 1,
-    alpha = 0.5
-  ) +
-  coord_cartesian(
-    ylim = c(0, 300)
-  ) +
-  labs(
-    title = "New Construction Permits vs. Housing Price Increase",
-    subtitle = "2018-2022, Point Size & Color as Average Units per Building",
-    color = "Average Units per Building",
-    x = "New Construction Permits Issued",
-    y = "Housing Price Index Increase"
-  ) +
-  scale_color_viridis_b(
-    option = "viridis", 
-    breaks = c(5, 10, 20, 40)
-  ) +
-  scale_size(
-    guide = "none"
-  ) +
-  theme(
-    plot.background = element_rect(fill = "gray10",
-                                   color = "gray10"),
-    panel.background = element_rect(color = "white",
-                                    linewidth = 2,
-                                    fill = NA),
-    panel.grid.minor = element_blank(),
-    axis.ticks = element_blank(),
-    axis.text = element_text(family = "Space Grotesk",
-                             color = "white"),
-    axis.title = element_text(family = "Space Grotesk Bold",
-                              color = "white"),
-    plot.title = element_text(family = "Space Grotesk Bold",
-                              size = 18,
-                              color = "white"),
-    plot.subtitle = element_text(family = "Space Grotesk Bold",
-                                 size = 13,
-                                 color = "gray90"),
-    legend.position = "bottom",
-    legend.background = element_rect(fill = "gray10"),
-    legend.title = element_text(family = "Space Grotesk",
-                                color = "white",
-                                vjust = 0.8),
-    legend.text = element_text(family = "Space Grotesk",
-                             color = "white"),
-    legend.margin = margin(0, 0, 0, 0)
-  ) 
-```
+And the same goes for 2018 (the code is hidden).
 
     `geom_smooth()` using formula = 'y ~ x'
 
@@ -474,76 +415,10 @@ units should mean less price gouging.
 
 ``` r
 summary(lm(diff ~ total_permits*average_units, data = avg_units_scatter_2012))
-```
-
-
-    Call:
-    lm(formula = diff ~ total_permits * average_units, data = avg_units_scatter_2012)
-
-    Residuals:
-       Min     1Q Median     3Q    Max 
-    -63.73 -18.31   1.46  13.27  92.74 
-
-    Coefficients:
-                                  Estimate Std. Error t value Pr(>|t|)    
-    (Intercept)                 117.658769  22.968117   5.123 0.000252 ***
-    total_permits                 0.055755   0.032810   1.699 0.115007    
-    average_units                 0.607267   1.555777   0.390 0.703133    
-    total_permits:average_units  -0.002860   0.001646  -1.737 0.107928    
-    ---
-    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-
-    Residual standard error: 38.24 on 12 degrees of freedom
-    Multiple R-squared:  0.3254,    Adjusted R-squared:  0.1568 
-    F-statistic:  1.93 on 3 and 12 DF,  p-value: 0.1787
-
-``` r
 summary(lm(diff ~ total_permits*average_units, data = avg_units_scatter_2018))
-```
 
-
-    Call:
-    lm(formula = diff ~ total_permits * average_units, data = avg_units_scatter_2018)
-
-    Residuals:
-        Min      1Q  Median      3Q     Max 
-    -33.721 -16.779  -0.819   8.311  67.202 
-
-    Coefficients:
-                                  Estimate Std. Error t value Pr(>|t|)    
-    (Intercept)                 94.5872199 18.7508175   5.044 0.000287 ***
-    total_permits               -0.0261964  0.0615757  -0.425 0.678050    
-    average_units               -0.5263295  1.3350380  -0.394 0.700318    
-    total_permits:average_units -0.0004601  0.0031646  -0.145 0.886809    
-    ---
-    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-
-    Residual standard error: 29.74 on 12 degrees of freedom
-    Multiple R-squared:  0.3023,    Adjusted R-squared:  0.1279 
-    F-statistic: 1.733 on 3 and 12 DF,  p-value: 0.2133
-
-``` r
 summary(lm(diff ~ total_permits, data = avg_units_scatter_2018))
 ```
-
-
-    Call:
-    lm(formula = diff ~ total_permits, data = avg_units_scatter_2018)
-
-    Residuals:
-        Min      1Q  Median      3Q     Max 
-    -36.211 -24.104   1.029  12.570  71.612 
-
-    Coefficients:
-                  Estimate Std. Error t value Pr(>|t|)    
-    (Intercept)   91.93582   10.67892   8.609 5.77e-07 ***
-    total_permits -0.04536    0.02079  -2.182   0.0467 *  
-    ---
-    Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-
-    Residual standard error: 28.48 on 14 degrees of freedom
-    Multiple R-squared:  0.2538,    Adjusted R-squared:  0.2004 
-    F-statistic: 4.761 on 1 and 14 DF,  p-value: 0.04666
 
 The statistics (hidden) also give somewhat strong explanatory power to
 the number of permits and average units. Both 2012 and 2018 having
@@ -557,9 +432,9 @@ for finding trends.
 
 ## Sources
 
-[IHS Price Index](https://price-index.housingstudies.org/) [Chicago
-Building
-Permits](https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu)
+[IHS Price Index](https://price-index.housingstudies.org/)  
+[Chicago Building
+Permits](https://data.cityofchicago.org/Buildings/Building-Permits/ydr8-5enu)  
 [Building Unit Census
 Data](https://censusreporter.org/data/table/?table=B25024&geo_ids=16000US1714000,140%7C16000US1714000&primary_geo_id=16000US1714000)
 
