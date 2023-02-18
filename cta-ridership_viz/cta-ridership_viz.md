@@ -1,13 +1,7 @@
----
-title: "CTA L Ridership Map"
-format: gfm
----
+CTA L Ridership Map
+================
 
-```{r}
-#| label: setup
-#| results: hide
-#| message: false
-#| warning: false
+``` r
 library(RSocrata)
 library(tidyverse)
 library(here)
@@ -16,8 +10,7 @@ library(lubridate)
 library(cowplot)
 ```
 
-```{r}
-#| label: Importing Data
+``` r
 monthly_riders <- read.socrata("https://data.cityofchicago.org/resource/t2rn-p8d7.csv")
 
 # to get these KML files I downloaded the KMZ files, changed the
@@ -31,8 +24,9 @@ ggplot(lines_sf) +
   geom_sf(data = stations_sf)
 ```
 
-```{r}
-#| label: Ridership Data Cleaning
+![](cta-ridership_viz_files/figure-commonmark/Importing%20Data-1.png)
+
+``` r
 monthly_riders_clean <- monthly_riders %>% 
   rename(station_name = stationame) %>% 
   filter(!station_name %in% c("Randolph/Wabash", "Madison/Wabash", "Washington/State", "Homan")) %>% 
@@ -52,9 +46,7 @@ correct_station_names <- as_tibble(unique(monthly_riders_clean$station_name)) %>
   mutate(station_id = seq(1:nrow(.)), .before = station_name)
 ```
 
-```{r}
-#| label: Station Location Cleaning
-
+``` r
 # the L stations geodata has a roosevelt for both the green/orange line stop,
 # and the red line stop, but the ridership data doesn't, so I have to purge it
 stations_sf_clean <- stations_sf %>%
@@ -64,8 +56,7 @@ stations_sf_clean <- stations_sf %>%
   filter(station_id != 125)
 ```
 
-```{r}
-#| label: Station Location & Ridership Dataframe
+``` r
 stations_sf_final <- stations_sf_clean %>% 
   mutate(station_name = correct_station_names$station_name)
 
@@ -76,11 +67,7 @@ stations_sf_riders_2022 <- monthly_riders_clean %>%
   left_join(stations_sf_final, ., by = c("station_name" = "station_name"))
 ```
 
-```{r}
-#| label: Plotting
-#| warning: false
-#| fig-width: 10
-#| fig-asp: 0.666
+``` r
 plot_1 <- ggplot(stations_sf_riders_2022) + 
   geom_sf(
     pch = 21,
@@ -137,3 +124,5 @@ plot_1 <- ggplot(stations_sf_riders_2022) +
 ggdraw(plot_1) +
   theme(panel.background = element_rect(fill = "gray10", color = NA))
 ```
+
+![](cta-ridership_viz_files/figure-commonmark/Plotting-1.png)
