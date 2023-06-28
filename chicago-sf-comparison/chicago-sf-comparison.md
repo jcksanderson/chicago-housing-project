@@ -1,13 +1,6 @@
----
-title: "Chicago vs San Francisco"
-format: gfm
----
+# Chicago vs San Francisco
 
-```{r}
-#| label: setup
-#| warning: false
-#| message: false
-#| results: false
+``` r
 library(tidyverse)
 library(RSocrata)
 library(sf)
@@ -15,9 +8,7 @@ library(here)
 library(zoo)
 ```
 
-```{r}
-#| label: Import Data
-
+``` r
 sf_permits <- read.socrata("https://data.sfgov.org/resource/p4e4-a5a7.csv?$query=SELECT permit_number, permit_type_definition, permit_creation_date, street_number, street_name, street_suffix, status, issued_date, revised_cost, existing_use, proposed_use, existing_units, proposed_units, location WHERE permit_type_definition='new construction' OR permit_type_definition='new construction wood frame' OR proposed_units>existing_units LIMIT 30000")
 
 # OOOHHHH MMYYY GOODODDDD
@@ -26,8 +17,7 @@ chi_permits <- read.socrata("https://data.cityofchicago.org/resource/ydr8-5enu.c
 # fix: downloading "nightly" version of rsocrata, v 1.8.0-10, where the query works
 ```
 
-```{r}
-#| label: Setting Theme
+``` r
 theme_update(
   plot.background = element_rect(color = "gray10",
                                        fill = "gray10"),
@@ -67,8 +57,7 @@ theme_update(
 )
 ```
 
-```{r}
-#| label: Clean Data
+``` r
 chi_permits_13_23 <- chi_permits %>% 
   mutate(
     issue_date = ymd(issue_date),
@@ -132,41 +121,61 @@ dual_permits_13_23 <- chi_permits_13_23 %>%
 
 ### That data cleaning was a mess. Here are the issues.
 
-The first is that Chicago's building permit dataset doesn't designate what a permit is for.
-Thus, leaving all the rows as-is loops new residential construction in with permits for business buildings, stages, and car hoists (yes, car hoists).
-This obviously makes it important to search specifically for some keywords for housing and specifically avoid some keywords for not housing.
-It's not perfect, but looking at the descriptions suggests that it's good enough.\n
+The first is that Chicago’s building permit dataset doesn’t designate
+what a permit is for. Thus, leaving all the rows as-is loops new
+residential construction in with permits for business buildings, stages,
+and car hoists (yes, car hoists). This obviously makes it important to
+search specifically for some keywords for housing and specifically avoid
+some keywords for not housing. It’s not perfect, but looking at the
+descriptions suggests that it’s good enough.
 
-### San Francisco's data is whole other beast.
+### San Francisco’s data is whole other beast.
 
-The issue is with its dataset's labeling.\n
+The issue is with its dataset’s labeling.
 
-Reasonably, one would think that the construction of new housing would be completely under the "new construction" (or "new construction wood frame") permit type.
-That approach is what I used to generate the final graph.
-However, the dataset also has numerous rows where the number of proposed units is greater than the number of existing units.
-This would suggest that there are even *more* new housing permits that are just hidden, but the majority of these permits are only *filed*, not complete or even issued.
-The combination of San Francisco's permits being under multiple categories, many not even being issued, and Chicago counting its permits in a completely different way makes trying to analyze both datasets like comparing apples to oranges.\n
+Reasonably, one would think that the construction of new housing would
+be completely under the “new construction” (or “new construction wood
+frame”) permit type. That approach is what I used to generate the final
+graph. However, the dataset also has numerous rows where the number of
+proposed units is greater than the number of existing units. This would
+suggest that there are even *more* new housing permits that are just
+hidden, but the majority of these permits are only *filed*, not complete
+or even issued. The combination of San Francisco’s permits being under
+multiple categories, many not even being issued, and Chicago counting
+its permits in a completely different way makes trying to analyze both
+datasets like comparing apples to oranges.
 
-Ultimately, I wanted to work with RSocrata because it makes uploading data from these portals very easy, however it seems like each portal is simply too inconsistent to compare.
-So take the first graph below with a grain of salt. Or a few grains. 
-```{r}
-#| label: Figuring Things Out
+Ultimately, I wanted to work with RSocrata because it makes uploading
+data from these portals very easy, however it seems like each portal is
+simply too inconsistent to compare. So take the first graph below with a
+grain of salt. Or a few grains.
+
+``` r
 # The number of new construction permits in San Francisco is so absurdly low and I don't know why.
 # I was wondering if there were more permit types that I wasn't aware of, but running:
 
 sf_permit_test <- read.socrata("https://data.sfgov.org/resource/p4e4-a5a7.csv?$query=SELECT permit_number, permit_type_definition, permit_creation_date, status, issued_date, revised_cost, proposed_use, location WHERE permit_creation_date>'2013-01-01' LIMIT 10000") %>% 
   distinct(permit_type_definition)
 sf_permit_test
+```
 
+                   permit_type_definition
+    1              otc alterations permit
+    2                        sign - erect
+    3    additions alterations or repairs
+    4         new construction wood frame
+    5                         demolitions
+    6                    new construction
+    7                wall or painted sign
+    8 grade or quarry or fill or excavate
+
+``` r
 # Shows that `new construction` and `new construction wood frame` are indeed the only two new construction permit types.
 # The Census has the SF metro area building many more houses than SF's permit count would suggest, but I don't see why
 # the SF data portal would be incorrect about how much it's building.
 ```
 
-```{r}
-#| label: Permits Per City Graphs
-#| fig-width: 8
-#| fig-asp: 0.666
+``` r
 breaks <- seq(2013, 2023, 1)
 
 ggplot(
@@ -195,25 +204,30 @@ ggplot(
     panel.grid.major.y = element_line(linewidth = 0.25),
     legend.position = c(.91, .915),
   )
+```
 
+![](chicago-sf-comparison_files/figure-commonmark/Permits%20Per%20City%20Graphs-1.png)
+
+``` r
 ggsave(here("chicago-sf-comparison", "plots", "sf-chi_permit-data-portal_bar-graph.png"), width = 8, height = 16/3)
 ```
 
 ### Department of Housing and Urban Development to the Rescue!
-The DHUD has a project called the "State of the Cities Data Systems" (SOCDS), which contains a few different datasets pertaining to cities.
-Most of them are antiquated (you can loop in their website, too), but they still maintain their "Building Permits Database," which keeps track of the number of housing permits issued in various cities.
-Unfortunately, I have to download it to a CSV to work with it, but it's already a really tidy dataset and I'm glad to have some consistency.
 
-```{r}
-#| label: Import HUD Data
-#| results: hide
-#| message: false
+The DHUD has a project called the “State of the Cities Data Systems”
+(SOCDS), which contains a few different datasets pertaining to cities.
+Most of them are antiquated (you can loop in their website, too), but
+they still maintain their “Building Permits Database,” which keeps track
+of the number of housing permits issued in various cities.
+Unfortunately, I have to download it to a CSV to work with it, but it’s
+already a really tidy dataset and I’m glad to have some consistency.
+
+``` r
 chi_hud_permits <- read_csv(here("CSV", "chicago_housing-permits.csv"))
 sf_hud_permits <- read_csv(here("CSV", "sanfrancisco_housing-permits.csv"))
 ```
 
-```{r}
-#| label: Clean HUD Data
+``` r
 chi_hud_total <- chi_hud_permits %>% 
   filter(
     Series == "Total Units",
@@ -242,11 +256,7 @@ hud_rolling_avgs <- bind_rows(chi_hud_total, sf_hud_total) %>%
   )
 ```
 
-```{r}
-#| label: Chicago and SF Rolling Averages
-#| fig-width: 8
-#| fig-asp: 0.666
-
+``` r
 ggplot(
     hud_rolling_avgs,
     aes(x = date,
@@ -310,14 +320,18 @@ ggplot(
     color = "#05BFDB",
     linewidth = 0.5
   )
+```
 
+![](chicago-sf-comparison_files/figure-commonmark/Chicago%20and%20SF%20Rolling%20Averages-1.png)
+
+``` r
 ggsave(here("chicago-sf-comparison", "plots", "SOCDS-permit_12-mo_line-graph.png"), width = 8, height = 16/3)
 ```
 
-This next graph is more just for messing around, 6-month and below moving averages make the graphs way too spiky.
+This next graph is more just for messing around, 6-month and below
+moving averages make the graphs way too spiky.
 
-```{r}
-#| label: 3-month Rolling Averages
+``` r
 chi_hud_total_3 <- chi_hud_permits %>% 
   filter(
     Series == "Total Units",
@@ -346,11 +360,7 @@ hud_rolling_avgs_3 <- bind_rows(chi_hud_total_3, sf_hud_total_3) %>%
   )
 ```
 
-```{r}
-#| label: Chicago and SF 6-Month Rolling Averages
-#| fig-width: 8
-#| fig-asp: 0.666
-
+``` r
 ggplot(
     hud_rolling_avgs_3,
     aes(x = date,
@@ -417,6 +427,10 @@ ggplot(
     color = "#05BFDB",
     linewidth = 0.5
   )
+```
 
+![](chicago-sf-comparison_files/figure-commonmark/Chicago%20and%20SF%206-Month%20Rolling%20Averages-1.png)
+
+``` r
 ggsave(here("chicago-sf-comparison", "plots", "SOCDS-permit_6-mo_line-graph.png"), width = 8, height = 16/3)
 ```
