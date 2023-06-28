@@ -20,6 +20,8 @@ sf_permits <- read.socrata("https://data.sfgov.org/resource/p4e4-a5a7.csv?$query
 
 # OOOHHHH MMYYY GOODODDDD
 chi_permits <- read.socrata("https://data.cityofchicago.org/resource/ydr8-5enu.csv?$query=select ID, PERMIT_TYPE, ISSUE_DATE, REPORTED_COST, COMMUNITY_AREA, CENSUS_TRACT, WARD, LOCATION where PERMIT_TYPE='PERMIT - NEW CONSTRUCTION' limit 30000")
+# For future reference: glitch occurred where rsocrata would append &$order=:id to end of query, breaking the query
+# fix: downloading "nightly" version of rsocrata, v 1.8.0-10, where the query works
 ```
 
 ```{r}
@@ -27,7 +29,8 @@ chi_permits <- read.socrata("https://data.cityofchicago.org/resource/ydr8-5enu.c
 chi_permits_13_23 <- chi_permits %>% 
   rename_with(tolower) %>% 
   mutate(issue_date = ymd_hms(issue_date)) %>% 
-  filter(issue_date >= "2013-01-01" & issue_date < "2023-01-01")
+  filter(issue_date >= "2013-01-01" & issue_date < "2023-01-01") %>% 
+  mutate(city = "Chicago", .before = id)
 
 sf_permits_13_23 <- sf_permits %>% 
   separate_wider_delim(
@@ -41,13 +44,65 @@ sf_permits_13_23 <- sf_permits %>%
     permit_creation_date = ymd(permit_creation_date)
   ) %>% 
   filter(
-    permit_creation_date >= "2013-01-01" & permit_creation_date < "2023-01-01"
-  ) %>% 
-  filter(
+    permit_creation_date >= "2013-01-01" & permit_creation_date < "2023-01-01",
     status %in% c("issued", "approved", "complete", "reinstated")
+  ) %>% 
+  distinct(
+    permit_number,
+    .keep_all = TRUE
+  ) %>% 
+  mutate(
+    city = "San Francisco",
+    .before = permit_number
   )
 
-
+dual_permits_13_23 <- chi_permits_13_23 %>% 
+  # below joins both dfs, merging the city column, but the rest are only in their respective city
+  full_join(sf_permits_13_23, by = c("city" = "city"), suffix = c("_chicago", "_sanfrancisco")) %>%  
+  mutate(
+    issue_date = if_else(is.na(issue_date), # creates new issue_date column with both cities in it
+                         permit_creation_date,
+                         issue_date),
+    location = if_else(is.na(location_chicago), # creates new location column with both cities in it
+                       location_sanfrancisco,
+                       location_chicago),
+    year = year(issue_date)
+  ) %>% 
+  select(city, year, issue_date, location) %>% 
+  count(city, year)
 ```
 
+```{r}
+#| label: Figuring Things Out
+# The number of new construction permits in San Francisco is so absurdly low and I don't know why.
+# I was wondering if there were more permit types that I wasn't aware of, but running:
+
+sf_permit_test <- read.socrata("https://data.sfgov.org/resource/p4e4-a5a7.csv?$query=SELECT permit_number, permit_type_definition, permit_creation_date, status, issued_date, revised_cost, proposed_use, location WHERE permit_creation_date>'2013-01-01' LIMIT 10000") %>% 
+  distinct(permit_type_definition)
+sf_permit_test
+
+# Shows that `new construction` and `new construction wood frame` are indeed the only two new construction permit types.
+# The Census has the SF metro area building many more houses than SF's permit count would suggest, but I don't see why
+# the SF data portal would be incorrect about how much it's building.
+```
+
+
+```{r}
+#| label: Permits Per City Graphs
+#| fig-width: 8
+#| fig-asp: 0.666
+ggplot(
+  dual_permits_13_23, 
+  aes(x = year, 
+      y = n, 
+      fill = city)
+  ) +
+  geom_bar(
+    stat = "identity",
+    position = "dodge"
+  ) +
+  labs(
+    y = "New Construction Permits Issued"
+  )
+```
 
