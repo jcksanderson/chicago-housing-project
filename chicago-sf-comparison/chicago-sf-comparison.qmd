@@ -1,0 +1,53 @@
+---
+title: "Chicago vs San Francisco"
+format: gfm
+---
+
+```{r}
+#| label: setup
+#| warning: false
+#| message: false
+#| results: false
+library(tidyverse)
+library(RSocrata)
+library(sf)
+```
+
+```{r}
+#| label: Import Data
+
+sf_permits <- read.socrata("https://data.sfgov.org/resource/p4e4-a5a7.csv?$query=SELECT permit_number, permit_type_definition, permit_creation_date, status, issued_date, revised_cost, proposed_use, location WHERE permit_type_definition='new construction' OR permit_type_definition='new construction wood frame' LIMIT 30000")
+
+# OOOHHHH MMYYY GOODODDDD
+chi_permits <- read.socrata("https://data.cityofchicago.org/resource/ydr8-5enu.csv?$query=select ID, PERMIT_TYPE, ISSUE_DATE, REPORTED_COST, COMMUNITY_AREA, CENSUS_TRACT, WARD, LOCATION where PERMIT_TYPE='PERMIT - NEW CONSTRUCTION' limit 30000")
+```
+
+```{r}
+#| label: Clean Data
+chi_permits_13_23 <- chi_permits %>% 
+  rename_with(tolower) %>% 
+  mutate(issue_date = ymd_hms(issue_date)) %>% 
+  filter(issue_date >= "2013-01-01" & issue_date < "2023-01-01")
+
+sf_permits_13_23 <- sf_permits %>% 
+  separate_wider_delim(
+    permit_creation_date,
+    delim = " ",
+    names = c("permit_creation_date", "permit_creation_time"),
+    too_few = "align_start"
+  ) %>% 
+  select(-permit_creation_time) %>% 
+  mutate(
+    permit_creation_date = ymd(permit_creation_date)
+  ) %>% 
+  filter(
+    permit_creation_date >= "2013-01-01" & permit_creation_date < "2023-01-01"
+  ) %>% 
+  filter(
+    status %in% c("issued", "approved", "complete", "reinstated")
+  )
+
+
+```
+
+
