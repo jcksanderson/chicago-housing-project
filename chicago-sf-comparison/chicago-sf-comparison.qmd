@@ -17,10 +17,10 @@ library(here)
 ```{r}
 #| label: Import Data
 
-sf_permits <- read.socrata("https://data.sfgov.org/resource/p4e4-a5a7.csv?$query=SELECT permit_number, permit_type_definition, permit_creation_date, status, issued_date, revised_cost, proposed_use, location WHERE permit_type_definition='new construction' OR permit_type_definition='new construction wood frame' LIMIT 30000")
+sf_permits <- read.socrata("https://data.sfgov.org/resource/p4e4-a5a7.csv?$query=SELECT permit_number, permit_type_definition, permit_creation_date, status, issued_date, revised_cost, existing_use, proposed_use, existing_units, proposed_units, location WHERE permit_type_definition='new construction' OR permit_type_definition='new construction wood frame' OR proposed_units>existing_units LIMIT 30000")
 
 # OOOHHHH MMYYY GOODODDDD
-chi_permits <- read.socrata("https://data.cityofchicago.org/resource/ydr8-5enu.csv?$query=select ID, PERMIT_TYPE, ISSUE_DATE, REPORTED_COST, COMMUNITY_AREA, CENSUS_TRACT, WARD, LOCATION where PERMIT_TYPE='PERMIT - NEW CONSTRUCTION' limit 30000")
+chi_permits <- read.socrata("https://data.cityofchicago.org/resource/ydr8-5enu.csv?$query=SELECT id, permit_type, issue_date, reported_cost, work_description, community_area, census_tract, ward, location WHERE permit_type='PERMIT - NEW CONSTRUCTION' limit 30000")
 # For future reference: glitch occurred where rsocrata would append &$order=:id to end of query, breaking the query
 # fix: downloading "nightly" version of rsocrata, v 1.8.0-10, where the query works
 ```
@@ -28,10 +28,21 @@ chi_permits <- read.socrata("https://data.cityofchicago.org/resource/ydr8-5enu.c
 ```{r}
 #| label: Clean Data
 chi_permits_13_23 <- chi_permits %>% 
-  rename_with(tolower) %>% 
-  mutate(issue_date = ymd_hms(issue_date)) %>% 
-  filter(issue_date >= "2013-01-01" & issue_date < "2023-01-01") %>% 
-  mutate(city = "Chicago", .before = id)
+  mutate(
+    issue_date = ymd(issue_date),
+    dwelling = case_when(
+      str_detect(str_to_lower(work_description), "revision") ~ FALSE,
+      str_detect(str_to_lower(work_description), "(dwelling|unit|family|residence|d.u.|home)") ~ TRUE,
+      str_detect(str_to_lower(work_description), "hoist|temporary|porch|replace") ~ FALSE,
+      TRUE ~ FALSE
+    ), 
+    city = "Chicago", .before = id
+  ) %>% 
+  filter(
+    issue_date >= "2013-01-01" & issue_date < "2023-01-01",
+    dwelling
+  )
+
 
 sf_permits_13_23 <- sf_permits %>% 
   separate_wider_delim(
@@ -46,7 +57,9 @@ sf_permits_13_23 <- sf_permits %>%
   ) %>% 
   filter(
     permit_creation_date >= "2013-01-01" & permit_creation_date < "2023-01-01",
-    status %in% c("issued", "approved", "complete", "reinstated")
+    status %in% c("issued", "approved", "complete", "reinstated"),
+    permit_type_definition %in% c("new construction", "new construction wood frame"),
+    proposed_use %in% c("1 family dwelling", "2 family dwellin", "apartments")
   ) %>% 
   distinct(
     permit_number,
@@ -92,6 +105,8 @@ sf_permit_test
 #| label: Permits Per City Graphs
 #| fig-width: 8
 #| fig-asp: 0.666
+breaks <- seq(2013, 2023, 1)
+
 ggplot(
   dual_permits_13_23, 
   aes(x = year, 
@@ -103,7 +118,49 @@ ggplot(
     position = "dodge"
   ) +
   labs(
-    y = "New Construction Permits Issued"
+    title = "San Francisco Hates Building New Houses",
+    y = "New Dwelling Construction Permits Issued",
+    fill = "City"
+  ) +
+  scale_x_continuous(
+    breaks = breaks, labels = breaks,
+    expand = c(0,0)
+  ) +
+  scale_y_continuous(
+    expand = c(0,0)
+  ) +
+  theme(plot.background = element_rect(color = "gray10",
+                                       fill = "gray10"),
+        panel.background = element_blank(),
+        
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(linewidth = 0.25),
+        
+        plot.title.position = "plot",
+        plot.title = element_text(color = "white",
+                                  family = "Space Grotesk",
+                                  face = "bold",
+                                  size = 20),
+        
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(color = "gray75",
+                                    family = "Space Grotesk",
+                                    face = "bold"),
+        axis.text = element_text(color = "gray60",
+                                 family = "Space Grotesk"),
+        
+        legend.background = element_rect(color = "gray10",
+                                         fill = "gray10"),
+        legend.title = element_text(family = "Space Grotesk",
+                                    face = "bold",
+                                    color = "gray75"),
+        legend.text = element_text(family = "Space Grotesk",
+                                   color = "gray60"),
+        legend.key = element_blank(),
+        legend.position = c(.91, .915),
+        
+        plot.margin = margin(10, 10, 10, 10)
   )
 
 # ggsave(here("chicago-sf-comparison", "plot-1.png"), width = 8)
