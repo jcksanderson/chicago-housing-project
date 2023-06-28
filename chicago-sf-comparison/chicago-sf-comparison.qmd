@@ -11,6 +11,7 @@ format: gfm
 library(tidyverse)
 library(RSocrata)
 library(sf)
+library(here)
 ```
 
 ```{r}
@@ -104,5 +105,7 @@ ggplot(
   labs(
     y = "New Construction Permits Issued"
   )
+
+# ggsave(here("chicago-sf-comparison", "plot-1.png"), width = 8)
 ```
 
