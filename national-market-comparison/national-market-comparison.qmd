@@ -1,0 +1,200 @@
+---
+title: "Addressing the US Housing Shortage"
+format: html
+---
+
+```{r}
+#| label: setup
+#| message: false
+#| warning: false
+#| results: false
+library(tidyverse)
+library(here)
+library(zoo)
+```
+
+```{r}
+#| label: Import Data
+#| message: false
+#| results: false
+
+# housing permits
+read_permits <- function(x) {
+  file <- read_csv(here("CSV", "housing-permits", x)) 
+  return(file)
+}
+# because you have to go into here(), the map function alone doesn't work
+# it tries to search for the filename in the working directory, but it doesn't exist there
+# so we make a function for it to search in the CSV folder
+
+permit_list <- list.files(path = here("CSV", "housing-permits"), pattern = ".*_housing-permits.csv")
+permit_file_list <- map(permit_list, read_permits)
+housing_permits <- bind_rows(permit_file_list)
+
+rm(permit_list, permit_file_list, read_permits)
+
+# housing & transportation index
+read_hti <- function(x) {
+  file <- read_csv(here("CSV", "ht-index", x))
+  return(file)
+}
+
+hti_list <- list.files(path = here("CSV", "ht-index"), pattern = ".*_hti.csv")
+hti_file_list <- map(hti_list, read_hti)
+ht_index <- bind_rows(hti_file_list)
+
+rm(hti_list, hti_file_list, read_hti)
+```
+
+```{r}
+#| label: Cleaning Data
+
+boroughs <- str_subset(str_to_title(unique(housing_permits$Location)), "Borough")
+
+total_housing_permits <- housing_permits %>% 
+  filter(
+    Series == "Total Units"
+  ) %>% 
+  mutate(
+    Location = str_to_title(Location),
+    Date = make_date(Year, Month, "01"),
+    City = case_when(
+      Location %in% boroughs ~ "New York",
+      Location == "Jacksonville-Duval County" ~ "Jacksonville",
+      TRUE ~ Location
+    ),
+    .after = Location
+  ) %>% 
+  group_by(
+    City, Date
+  ) %>% 
+  summarize(
+    Permits = sum(Permits),
+  ) %>% 
+  mutate(
+    Permit_Avg = rollmean(Permits, k = 12, fill = NA, align = "right")
+  ) %>% 
+  filter(
+    !is.na(Permit_Avg),
+    Date <= "2023-04-01" # the rest of the 2023 months are "0" which messes up the data
+  )
+
+cities <- str_to_lower(unique(total_housing_permits$City))
+
+cities_ht_index <- ht_index %>% 
+  mutate(
+    name = str_remove_all(name, '"'), # names were surrounded with quotes
+    cbsa = str_remove_all(cbsa, '"')
+  ) %>% 
+  filter(
+    str_to_lower(name) %in% cities,
+    population > 250000 # there were a lot of duplicate cities lol
+  ) %>% 
+  select(
+    name, cbsa, population, ht_ami, ht_nmi, h_ami, h_nmi, t_ami, t_nmi, h_cost
+  )
+```
+
+```{r}
+#| label: Set Graph Theme
+theme_update(
+  plot.background = element_rect(color = "gray10",
+                                       fill = "gray10"),
+        panel.background = element_blank(),
+        
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor.x = element_blank(),
+        panel.grid.major.y = element_line(linewidth = 0.15),
+        panel.grid.minor.y = element_line(linewidth = 0.15),      
+  
+        plot.title.position = "plot",
+        plot.title = element_text(color = "white",
+                                  family = "Space Grotesk",
+                                  face = "bold",
+                                  size = 20),
+        
+        plot.caption.position = "plot",
+        plot.caption = element_text(color = "gray75",
+                                family = "Space Grotesk"),
+  
+        axis.ticks = element_blank(),
+        axis.title.x = element_blank(),
+        axis.title.y = element_text(color = "gray75",
+                                    family = "Space Grotesk",
+                                    face = "bold"),
+        axis.text = element_text(color = "gray60",
+                                 family = "Space Grotesk"),
+        
+        legend.background = element_rect(color = "gray10",
+                                         fill = "gray10"),
+        legend.title = element_text(family = "Space Grotesk",
+                                    face = "bold",
+                                    color = "gray75"),
+        legend.text = element_text(family = "Space Grotesk",
+                                   color = "gray60"),
+        legend.key = element_blank(),
+        
+        plot.margin = margin(10, 10, 10, 10)
+)
+```
+
+```{r}
+#| label: Housing Permit Graph
+ggplot(
+  total_housing_permits,
+  aes(x = Date,
+      y = Permit_Avg,
+      group = City)
+  ) +
+  geom_line(
+    aes(color = City)
+  ) + 
+  labs(
+    title = "Bring Back 2015 NYC",
+    y = "Monthly Housing Permits, 12-mo. Moving Avg."
+  )
+# ggsave(here("national-market-comparison", "plots", "chaos.png"), width = 8, height = 16/3)
+```
+
+```{r}
+#| label: Merging Dataframes + Calculating Housing Response Index
+
+housing_response_index <- total_housing_permits %>% 
+  left_join(
+    cities_ht_index, 
+    join_by(City == name)
+  ) %>% 
+  mutate(
+    hri = (Permit_Avg/(ht_nmi/10)^2),
+    .after = Permit_Avg,
+    City = fct(City)
+  )
+
+```
+
+```{r}
+
+ggplot(
+  housing_response_index,
+  aes(x = Date,
+      y = hri,
+      color = fct_reorder2(City, Date, hri))
+  ) +
+  geom_line(
+  ) + 
+  labs(
+    title = "Market Response Index",
+    y = "Monthly Housing Permits, 12-mo. Moving Avg."
+  ) +
+  coord_cartesian(
+    xlim = c(as_date("2015-01-01"), as_date("2023-04-01"))
+  ) +
+  guides(
+    color = guide_legend(nrow = 9)
+  )
+
+
+```
+
+
+
