@@ -8,14 +8,14 @@ library(data.table)
 ```
 
 ``` r
-new_construction <- fread("CSV/CSV_chicago_building-permits.csv") %>%  
+new_construction <- fread("data/CSV_chicago_building-permits.csv") %>%  
   select("PERMIT_TYPE", "ISSUE_DATE", "REPORTED_COST", "COMMUNITY_AREA", "XCOORDINATE", "YCOORDINATE", "LATITUDE", "LONGITUDE") %>% # selects relevant columns
   filter(PERMIT_TYPE == "PERMIT - NEW CONSTRUCTION") %>% # only new construction
   filter(!is.na(LATITUDE) & !is.na(LONGITUDE)) # has to have lat & long
 ```
 
 ``` r
-tracts <- read_sf("SHP/SHP_chicago-tracts/acs2021_5yr_B01003_14000US17031010502.shp", quiet = TRUE)
+tracts <- read_sf("data/SHP_chicago-tracts/acs2021_5yr_B01003_14000US17031010502.shp", quiet = TRUE)
 ```
 
 ``` r
