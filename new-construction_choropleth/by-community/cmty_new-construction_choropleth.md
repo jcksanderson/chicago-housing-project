@@ -15,7 +15,7 @@ dataset is useless.
 
 ``` r
 # read in data
-new_construction_bad_date <- fread("CSV/CSV_chicago_building-permits.csv") %>%  
+new_construction_bad_date <- fread("data/CSV_chicago_building-permits.csv") %>%  
   select("PERMIT_TYPE", "ISSUE_DATE", "REPORTED_COST", "COMMUNITY_AREA", "XCOORDINATE", "YCOORDINATE", "LATITUDE", "LONGITUDE") %>% # selects relevant columns
   filter(PERMIT_TYPE == "PERMIT - NEW CONSTRUCTION") %>% # only new construction
   filter(!is.na(COMMUNITY_AREA)) # community area has to have a value
@@ -57,7 +57,7 @@ After cleaning the permit data, we need to import the community area
 shapefile.
 
 ``` r
-community_areas <- st_read("SHP/SHP_chicago-communities/geo_export_e07d67fa-91ce-4d30-9da3-eb903021731c.shp", quiet = TRUE)
+community_areas <- st_read("data/SHP_chicago-communities/geo_export_e07d67fa-91ce-4d30-9da3-eb903021731c.shp", quiet = TRUE)
 
 community_areas_fortified <- fortify(community_areas) # turns shapefile into dataframe
 
