@@ -1,5 +1,4 @@
-Housing Price Index, New Construction, and Average Units Scatterplot
-================
+# Housing Price Index, New Construction, and Average Units Scatterplot
 
 ## Introduction
 
@@ -52,7 +51,7 @@ in a Google Sheet, but to get all the PUMA names in full I turned the
 /’s and &’s to commas.
 
 ``` r
-price_index_data <- read_csv(here("CSV", "CSV_IHS-price-index-data.csv")) %>% 
+price_index_data <- read_csv(here("data", "CSV_IHS-price-index-data.csv")) %>% 
   gather(2:17, key = "PUMA", value = "Index") %>% 
   mutate(Date = ymd(Date)) %>% 
   mutate(PUMA = str_replace_all(.$PUMA, "Englewood/West Englewood", "Englewood, West Englewood")) %>% 
@@ -67,7 +66,7 @@ clean it up, I filtered the permit to be for new construction and turned
 the date column into the ISO-8601 standard with Lubridate.
 
 ``` r
-new_construction_permits <- fread(here("CSV", "CSV_chicago_building-permits.csv")) %>% 
+new_construction_permits <- fread(here("data", "CSV_chicago_building-permits.csv")) %>% 
   select("PERMIT_TYPE", "ISSUE_DATE", "REPORTED_COST", "COMMUNITY_AREA", "XCOORDINATE", "YCOORDINATE", "LATITUDE", "LONGITUDE") %>% 
   filter(PERMIT_TYPE == "PERMIT - NEW CONSTRUCTION") %>%
   filter(!is.na(COMMUNITY_AREA)) %>% 
@@ -141,7 +140,7 @@ comm_area_cumu_permits_2012 <- new_constr_permits_2012_cumu %>%
   summarize(CUMULATIVE_PERMITS = last(CUMULATIVE_PERMITS)) %>% 
   filter(COMMUNITY_AREA != 0)
 
-community_area_names <- read_csv(here("CSV", "CSV_community_area_names.csv"))
+community_area_names <- read_csv(here("data", "CSV_community_area_names.csv"))
 ```
 
     Rows: 77 Columns: 2
@@ -213,7 +212,7 @@ the bigger picture, which works for basic exploratory analysis. I then
 added a column which had the center of each tract, for future use.
 
 ``` r
-tract_housing_units <- read_sf(here("SHP", "SHP_chicago-tracts_housing-stock"), quiet = TRUE) %>% 
+tract_housing_units <- read_sf(here("data", "SHP_chicago-tracts_housing-stock"), quiet = TRUE) %>% 
   select(geoid, 
          name, 
          geometry, 
@@ -249,15 +248,14 @@ head(tract_housing_centers)
     Bounding box:  xmin: -87.68465 ymin: 41.99819 xmax: -87.6508 ymax: 42.02314
     Geodetic CRS:  WGS 84
     # A tibble: 6 × 5
-      geoid        name                center average_un…¹                  geometry
-      <chr>        <chr>          <POINT [°]>        <dbl>             <POLYGON [°]>
-    1 14000US1703… Cens… (-87.66983 42.02126)         21.3 ((-87.6772 42.02294, -87…
-    2 14000US1703… Cens… (-87.68015 42.01601)         20.7 ((-87.68465 42.01948, -8…
-    3 14000US1703… Cens… (-87.67333 42.01605)         25.7 ((-87.67683 42.01941, -8…
-    4 14000US1703… Cens… (-87.66654 42.01594)         38.7 ((-87.67133 42.01937, -8…
-    5 14000US1703… Cens… (-87.65717 42.00544)         34.8 ((-87.66345 42.01283, -8…
-    6 14000US1703… Cens… (-87.66396 42.00941)         41.4 ((-87.66592 42.01279, -8…
-    # … with abbreviated variable name ¹​average_units
+      geoid  name                center average_units                       geometry
+      <chr>  <chr>          <POINT [°]>         <dbl>                  <POLYGON [°]>
+    1 14000… Cens… (-87.66983 42.02126)          21.3 ((-87.6772 42.02294, -87.6762…
+    2 14000… Cens… (-87.68015 42.01601)          20.7 ((-87.68465 42.01948, -87.684…
+    3 14000… Cens… (-87.67333 42.01605)          25.7 ((-87.67683 42.01941, -87.676…
+    4 14000… Cens… (-87.66654 42.01594)          38.7 ((-87.67133 42.01937, -87.671…
+    5 14000… Cens… (-87.65717 42.00544)          34.8 ((-87.66345 42.01283, -87.663…
+    6 14000… Cens… (-87.66396 42.00941)          41.4 ((-87.66592 42.01279, -87.665…
 
 I imported the Illinois PUMAs shapefile, limited them to Chicago, fixed
 their names, and numbered them (I saved just PUMA IDs and names for
@@ -265,7 +263,7 @@ later). Then I used `st_within()` to calculate what census tracts are
 inside which PUMAs.
 
 ``` r
-chicago_pumas <- read_sf(here("SHP", "SHP_illinois_PUMAs", "tl_2020_17_puma10.shp")) %>% 
+chicago_pumas <- read_sf(here("data", "SHP_illinois_PUMAs", "tl_2020_17_puma10.shp")) %>% 
   filter(grepl("Chicago City", NAMELSAD10) & !grepl("Cook", NAMELSAD10)) %>% 
   st_set_crs(st_crs(tract_housing_centers)) %>% 
   mutate(NAMELSAD10 = str_match(.$NAMELSAD10, ".*\\-\\-(.*)")[,2]) %>% 

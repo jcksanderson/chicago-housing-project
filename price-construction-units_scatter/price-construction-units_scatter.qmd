@@ -53,7 +53,7 @@ I had already cleaned it up a bit in a Google Sheet, but to get all the PUMA nam
 ```{r}
 #| label: Price Index Data
 #| message: false
-price_index_data <- read_csv(here("CSV", "CSV_IHS-price-index-data.csv")) %>% 
+price_index_data <- read_csv(here("data", "CSV_IHS-price-index-data.csv")) %>% 
   gather(2:17, key = "PUMA", value = "Index") %>% 
   mutate(Date = ymd(Date)) %>% 
   mutate(PUMA = str_replace_all(.$PUMA, "Englewood/West Englewood", "Englewood, West Englewood")) %>% 
@@ -68,7 +68,7 @@ To clean it up, I filtered the permit to be for new construction and turned the 
 ```{r}
 #| label: New Construction Permits
 #| message: false
-new_construction_permits <- fread(here("CSV", "CSV_chicago_building-permits.csv")) %>% 
+new_construction_permits <- fread(here("data", "CSV_chicago_building-permits.csv")) %>% 
   select("PERMIT_TYPE", "ISSUE_DATE", "REPORTED_COST", "COMMUNITY_AREA", "XCOORDINATE", "YCOORDINATE", "LATITUDE", "LONGITUDE") %>% 
   filter(PERMIT_TYPE == "PERMIT - NEW CONSTRUCTION") %>%
   filter(!is.na(COMMUNITY_AREA)) %>% 
@@ -128,7 +128,7 @@ comm_area_cumu_permits_2012 <- new_constr_permits_2012_cumu %>%
   summarize(CUMULATIVE_PERMITS = last(CUMULATIVE_PERMITS)) %>% 
   filter(COMMUNITY_AREA != 0)
 
-community_area_names <- read_csv(here("CSV", "CSV_community_area_names.csv"))
+community_area_names <- read_csv(here("data", "CSV_community_area_names.csv"))
 comm_area_cumu_permits_2012 <- left_join(comm_area_cumu_permits_2012, community_area_names, by = c("COMMUNITY_AREA" = "Number"))
 ```
 
@@ -192,7 +192,7 @@ I then added a column which had the center of each tract, for future use.
 
 ```{r}
 #| label: Housing Tract Centers & Average Units
-tract_housing_units <- read_sf(here("SHP", "SHP_chicago-tracts_housing-stock"), quiet = TRUE) %>% 
+tract_housing_units <- read_sf(here("data", "SHP_chicago-tracts_housing-stock"), quiet = TRUE) %>% 
   select(geoid, 
          name, 
          geometry, 
@@ -227,7 +227,7 @@ Then I used `st_within()` to calculate what census tracts are inside which PUMAs
 ```{r}
 #| label: Tracts within PUMAs
 #| warning: false
-chicago_pumas <- read_sf(here("SHP", "SHP_illinois_PUMAs", "tl_2020_17_puma10.shp")) %>% 
+chicago_pumas <- read_sf(here("data", "SHP_illinois_PUMAs", "tl_2020_17_puma10.shp")) %>% 
   filter(grepl("Chicago City", NAMELSAD10) & !grepl("Cook", NAMELSAD10)) %>% 
   st_set_crs(st_crs(tract_housing_centers)) %>% 
   mutate(NAMELSAD10 = str_match(.$NAMELSAD10, ".*\\-\\-(.*)")[,2]) %>% 
