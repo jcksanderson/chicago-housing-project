@@ -11,7 +11,7 @@ CSV/
 SHP/
 data/
 incomplete/
-./plots/
+**/plots/
 
 # CSVs
 PROJ_new-construction_choropleth/CSV_chicago_building-permits.csv
