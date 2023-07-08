@@ -96,8 +96,9 @@ bounding_box <- st_bbox(tracts_average_units) # order: xmin, ymin, xmax, ymax
 
 # wasn't able to match ground_material with the plot.background
 # so I made the limits huge so that you only see plot.background
-rayshader_housing_units <- ggplot(tracts_average_units, aes(fill = average_units)) +
-  geom_sf(color = NA) +
+rayshader_housing_units <- ggplot(tracts_average_units) +
+  geom_sf(aes(fill = average_units),
+           color = NA) +
   scale_fill_viridis_c() +
   coord_sf(
     xlim = c(bounding_box[1] - 0.25, bounding_box[3] + 0.25),
@@ -115,20 +116,24 @@ rgl::clear3d()
 plot_gg(
   rayshader_housing_units,
   solid = FALSE,
-  shadowdepth = -0.001,
+  shadow = FALSE,
   scale = 100,
   theta = 330,
   phi = 45,
-  zoom = 0.3
+  zoom = 0.36
  )
 
+
 render_highquality(
-  filename = here("housing-stock_choropleth", "plots", "raytrace_test_10.png"),
-  width = 1200,
-  height = 1200,
-  samples = 1200,
+  filename = here("housing-stock_choropleth", "plots", "raytraced_10.png"),
   interactive = FALSE,
   preview = FALSE,
+  # output settings
+  width = 3000,
+  height = 3000,
+  samples = 500,
+  min_variance = 5e-10,
+  # light settings
   lightintensity = 1000,
   lightdirection = 290,
   lightaltitude = 38
