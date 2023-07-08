@@ -8,6 +8,9 @@ library(here)
 library(zoo)
 ```
 
+Note: It appears the San Francisco Data Portal’s API is not returning
+the dataset, meaning the first graph lacks San Francisco’s data.
+
 ``` r
 sf_permits <- read.socrata("https://data.sfgov.org/resource/p4e4-a5a7.csv?$query=SELECT permit_number, permit_type_definition, permit_creation_date, street_number, street_name, street_suffix, status, issued_date, revised_cost, existing_use, proposed_use, existing_units, proposed_units, location WHERE permit_type_definition='new construction' OR permit_type_definition='new construction wood frame' OR proposed_units>existing_units LIMIT 30000")
 
@@ -159,15 +162,8 @@ sf_permit_test <- read.socrata("https://data.sfgov.org/resource/p4e4-a5a7.csv?$q
 sf_permit_test
 ```
 
-                   permit_type_definition
-    1              otc alterations permit
-    2                        sign - erect
-    3    additions alterations or repairs
-    4         new construction wood frame
-    5                         demolitions
-    6                    new construction
-    7                wall or painted sign
-    8 grade or quarry or fill or excavate
+    [1] permit_type_definition
+    <0 rows> (or 0-length row.names)
 
 ``` r
 # Shows that `new construction` and `new construction wood frame` are indeed the only two new construction permit types.
@@ -223,15 +219,16 @@ Unfortunately, I have to download it to a CSV to work with it, but it’s
 already a really tidy dataset and I’m glad to have some consistency.
 
 ``` r
-chi_hud_permits <- read_csv(here("CSV", "chicago_housing-permits.csv"))
-sf_hud_permits <- read_csv(here("CSV", "sanfrancisco_housing-permits.csv"))
+chi_hud_permits <- read_csv(here("data", "housing-permits", "chicago_housing-permits.csv"))
+sf_hud_permits <- read_csv(here("data", "housing-permits", "san-francisco_housing-permits.csv"))
 ```
 
 ``` r
 chi_hud_total <- chi_hud_permits %>% 
   filter(
     Series == "Total Units",
-    Permits > 0
+    Permits > 0,
+    Year > 2012
   ) %>% 
   mutate(
     moving_avg = rollmean(Permits, k = 12, fill = NA, align = "right")
@@ -240,7 +237,8 @@ chi_hud_total <- chi_hud_permits %>%
 sf_hud_total <- sf_hud_permits %>% 
   filter(
     Series == "Total Units",
-    Permits > 0
+    Permits > 0,
+    Year > 2012
   ) %>% 
   mutate(
     moving_avg = rollmean(Permits, k = 12, fill = NA, align = "right")
