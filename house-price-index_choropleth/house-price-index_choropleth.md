@@ -1,5 +1,4 @@
-Chicago Housing Market Data Exploration
-================
+# Chicago Housing Market Data Exploration
 
 Step 1 is to load the libraries.  
 The knitr option is to set the root directory (for rendering) to the
@@ -24,8 +23,7 @@ knitr::opts_knit$set(root.dir = here())
 Then we read in the shapefile of the PUMAs and render as a test.
 
 ``` r
-il_pumas <- read_sf(here("SHP", 
-                         "SHP_illinois_PUMAs/tl_2020_17_puma10.shp")
+il_pumas <- read_sf(here("data", "SHP_illinois_PUMAs/tl_2020_17_puma10.shp")
                     )
 chicago_pumas <- il_pumas %>% 
   filter(grepl("Chicago City", NAMELSAD10) & !grepl("Cook", NAMELSAD10))
@@ -50,10 +48,9 @@ I figured 2012+ would be a good starting point since it was around the
 low after 2008, and 2018+ encompasses more recent development.
 
 ``` r
-price_index_data <- read_csv(here("CSV", 
-                                  "CSV_IHS-price-index-data.csv")
-                             ) %>% 
-  gather(2:17, key = "PUMA", value = "Index")
+price_index_data <- read_csv(here("data", "CSV_IHS-price-index-data.csv")) %>% 
+  pivot_longer(2:17, names_to = "PUMA", values_to = "Index") %>% 
+  mutate(PUMA = fct(PUMA))
 ```
 
     Rows: 102 Columns: 17
@@ -66,14 +63,12 @@ price_index_data <- read_csv(here("CSV",
     ℹ Specify the column types or set `show_col_types = FALSE` to quiet this message.
 
 ``` r
-price_index_data$Date <- ymd(price_index_data$Date)
-
-price_index_data_diff_2012 <- price_index_data %>% 
+price_index_diff_2012 <- price_index_data %>% 
   filter(Date == "2012-01-01" | Date == "2022-01-01") %>% 
   group_by(PUMA) %>% 
   summarize(diff = last(Index) - first(Index))
 
-price_index_data_diff_2018 <- price_index_data %>% 
+price_index_diff_2018 <- price_index_data %>% 
   filter(Date == "2018-01-01" | Date == "2022-01-01") %>% 
   group_by(PUMA) %>% 
   summarize(diff = last(Index) - first(Index))
@@ -82,9 +77,9 @@ price_index_data_diff_2018 <- price_index_data %>%
 Merge the dataframes.
 
 ``` r
-choropleth_data_2012 <- left_join(chicago_pumas, price_index_data_diff_2012, by = c("NAMELSAD10" = "PUMA"))
+choropleth_data_2012 <- left_join(chicago_pumas, price_index_diff_2012, by = c("NAMELSAD10" = "PUMA"))
 
-choropleth_data_2018 <- left_join(chicago_pumas, price_index_data_diff_2018, by = c("NAMELSAD10" = "PUMA"))
+choropleth_data_2018 <- left_join(chicago_pumas, price_index_diff_2018, by = c("NAMELSAD10" = "PUMA"))
 ```
 
 And plot!
