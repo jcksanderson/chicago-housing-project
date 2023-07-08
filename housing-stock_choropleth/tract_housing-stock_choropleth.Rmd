@@ -18,7 +18,7 @@ library(here)
 Then we'll load in our census data and turn it into a data table.
 
 ```{r}
-tracts_df <- read_sf("SHP/SHP_chicago-tracts_housing-stock/acs2021_5yr_B25024_14000US17031010502.shp", quiet = TRUE)
+tracts_df <- read_sf("data/SHP_chicago-tracts_housing-stock/acs2021_5yr_B25024_14000US17031010502.shp", quiet = TRUE)
 ```
 
 But these column names aren't very descriptive and some are unnecessary.
@@ -44,8 +44,22 @@ Then we'll calculate the average housing units per each tract.\n
 (The weighting isn't going to be perfect. I only took the average value from each variable [e.g. (5 + 9)/2 = 7] but it should be good enough to see trends.)
 
 ```{r}
+AVG_2 <- 2
+AVG_3_4 <- 3.5
+AVG_5_9 <- 7
+AVG_10_19 <- 14.5
+AVG_20_49 <- 34.5
+
 tracts_average_units <- tracts_cleaned %>% 
-  mutate(average_units = (one_detached + one_attached + (two * 2) + (three_or_four * 3.5) + (five_to_nine * 7) + (ten_to_nineteen * 14.5) + (twenty_to_fortynine * 34.5) + (fifty_plus * 100))/total_units, .after = total_units)
+  mutate(average_units = (one_detached + 
+                          one_attached + 
+                          (two * AVG_2) + 
+                          (three_or_four * AVG_3_4) + 
+                          (five_to_nine * AVG_5_9) + 
+                          (ten_to_nineteen * AVG_10_19) + 
+                          (twenty_to_fortynine * AVG_20_49) + 
+                          (fifty_plus * 100) )/total_units,
+         .after = total_units)
 ```
 
 Finally we just have to plot it.
@@ -139,39 +153,3 @@ render_highquality(
   lightaltitude = 38
 )
 ```
-
-```{r}
-
-test_plot <- ggplot(mpg, aes(x = displ, y = hwy)) +
-  geom_point()
-
-plot_gg(
-  test_plot,
-  solid = FALSE
-)
-
-render_snapshot()
-
-render_highquality(
-  ground_material = diffuse(color = "gray10")
-)
-```
-
-```{r}
-montereybay %>%
-    sphere_shade(zscale = 10, texture = "imhof1") %>%
-    plot_3d(montereybay, zscale = 50, fov = 70, theta = 270, phi = 30, 
-            windowsize = c(1000, 800), zoom = 0.6,  
-            water = TRUE, waterdepth = 0, wateralpha = 0.5, watercolor = "#233aa1",
-            waterlinecolor = "white", waterlinealpha = 0.5)
-Sys.sleep(0.2)
-render_highquality(lightdirection = c(-45,45), 
-                   lightaltitude  = 30, 
-                   clamp_value = 10, 
-                   samples = 256, 
-                   camera_lookat= c(0,-50,0),
-                   ground_material = diffuse(color="grey50",checkercolor = "grey20", checkerperiod = 100),
-                   clear = TRUE)
-```
-
-
