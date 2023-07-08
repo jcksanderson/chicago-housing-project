@@ -9,7 +9,9 @@ chicago-housing-project.Rproj
 # folders
 CSV/
 SHP/
+data/
 incomplete/
+./plots/
 
 # CSVs
 PROJ_new-construction_choropleth/CSV_chicago_building-permits.csv
