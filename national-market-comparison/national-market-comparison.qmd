@@ -1,6 +1,6 @@
 ---
 title: "Addressing the US Housing Shortage"
-format: html
+format: gfm
 ---
 
 ```{r}
@@ -21,14 +21,14 @@ library(plotly)
 
 # housing permits
 read_permits <- function(x) {
-  file <- read_csv(here("CSV", "housing-permits", x)) 
+  file <- read_csv(here("data", "housing-permits", x)) 
   return(file)
 }
 # because you have to go into here(), the map function alone doesn't work
 # it tries to search for the filename in the working directory, but it doesn't exist there
 # so we make a function for it to search in the CSV folder
 
-permit_list <- list.files(path = here("CSV", "housing-permits"), pattern = ".*_housing-permits.csv")
+permit_list <- list.files(path = here("data", "housing-permits"), pattern = ".*_housing-permits.csv")
 permit_file_list <- map(permit_list, read_permits)
 housing_permits <- bind_rows(permit_file_list)
 
@@ -36,11 +36,11 @@ rm(permit_list, permit_file_list, read_permits)
 
 # housing & transportation index
 read_hti <- function(x) {
-  file <- read_csv(here("CSV", "ht-index", x))
+  file <- read_csv(here("data", "ht-index", x))
   return(file)
 }
 
-hti_list <- list.files(path = here("CSV", "ht-index"), pattern = ".*_hti.csv")
+hti_list <- list.files(path = here("data", "ht-index"), pattern = ".*_hti.csv")
 hti_file_list <- map(hti_list, read_hti)
 ht_index <- bind_rows(hti_file_list)
 
@@ -274,7 +274,7 @@ ggplot(
     plot.title = element_text(size = 17)
   )
 
-ggsave(here("national-market-comparison", "plots", "HRI.png"), width = 10, height = 5)
+# ggsave(here("national-market-comparison", "plots", "HRI.png"), width = 10, height = 5)
 ```
 
 
