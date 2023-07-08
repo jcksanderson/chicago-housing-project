@@ -11,6 +11,7 @@ format: html
 library(tidyverse)
 library(here)
 library(zoo)
+library(plotly)
 ```
 
 ```{r}
@@ -61,6 +62,7 @@ total_housing_permits <- housing_permits %>%
     City = case_when(
       Location %in% boroughs ~ "New York",
       Location == "Jacksonville-Duval County" ~ "Jacksonville",
+      Location == "Washington" ~ "Washington DC",
       TRUE ~ Location
     ),
     .after = Location
@@ -84,7 +86,8 @@ cities <- str_to_lower(unique(total_housing_permits$City))
 cities_ht_index <- ht_index %>% 
   mutate(
     name = str_remove_all(name, '"'), # names were surrounded with quotes
-    cbsa = str_remove_all(cbsa, '"')
+    cbsa = str_remove_all(cbsa, '"'),
+    name = if_else(name == "Washington", "Washington DC", name)
   ) %>% 
   filter(
     str_to_lower(name) %in% cities,
@@ -140,21 +143,89 @@ theme_update(
 
 ```{r}
 #| label: Housing Permit Graph
-ggplot(
-  total_housing_permits,
+#| fig-width: 8
+#| fig-asp: 0.666
+permit_key <- highlight_key(total_housing_permits, ~City)
+
+plotly_permits <- ggplot(
+  permit_key,
   aes(x = Date,
       y = Permit_Avg,
-      group = City)
+      color = fct_reorder2(City, Date, Permit_Avg),
+      group = City,
+      text = str_c("City: ", fct_reorder2(City, Date, Permit_Avg),
+                   "\nAvg. Permits: ", round(Permit_Avg, digits = 2))
+      )
   ) +
   geom_line(
-    aes(color = City)
   ) + 
   labs(
-    title = "Bring Back 2015 NYC",
-    y = "Monthly Housing Permits, 12-mo. Moving Avg."
+    title = "New York and Sunbelt Cities Lead the Way in Housing\nPermitting, While Most Northern Cities Fall Behind",
+    y = "Monthly Housing Unit Permits, 12-mo. Moving Avg.",
+    color = "City"
+  ) +
+  coord_cartesian(
+    ylim = c(-5, 2505),
+    xlim = c(as_date("2017-01-01"), as_date("2023-04-01"))
+  ) +
+  scale_x_date(
+    date_breaks = "1 year",
+    date_labels = "%Y"
+  ) +
+  scale_y_continuous(
+    expand = c(0,0)
+  ) +
+  guides(
+    color = guide_legend(nrow = 9)
+  ) +
+  theme(
+    axis.text.x = element_text(vjust = 1),
+    axis.ticks.x = element_line(color = "gray40"),
   )
-# ggsave(here("national-market-comparison", "plots", "chaos.png"), width = 8, height = 16/3)
+# ggsave(here("national-market-comparison", "plots", "national_housing-permits_line-graph.png"), width = 10, height = 5)
+
+font = list(
+  family = "Space Grotesk",
+  size = 12,
+  color = "white"
+)
+
+label = list(
+  bordercolor = "transparent",
+  font = font
+)
+
+plot <- ggplotly(
+  plotly_permits,
+  tooltip = c("x", "text") # this is really janky, it *requires* the group = 1
+  ) %>% 
+  layout(
+    plot_bgcolor='rgba(0,0,0,0)',
+    font = font,
+    yaxis = list(fixedrange = TRUE),
+    xaxis = list(fixedrange = TRUE)
+  ) %>% 
+  style(
+    hoverlabel = label
+  ) %>% 
+  config(
+    displayModeBar = FALSE
+  )
+
+highlight <- highlight(
+  plot, on = "plotly_hover", 
+  off = "plotly_doubleclick", 
+  selected = attrs_selected(showlegend = FALSE)
+  )
+
 ```
+
+```{r}
+#| label: save widget
+# library(htmlwidgets)
+# saveWidget(highlight, "plot.html")
+```
+
 
 ```{r}
 #| label: Merging Dataframes + Calculating Housing Response Index
@@ -165,7 +236,7 @@ housing_response_index <- total_housing_permits %>%
     join_by(City == name)
   ) %>% 
   mutate(
-    hri = (Permit_Avg/(ht_nmi/10)^2),
+    hri = (Permit_Avg/ht_nmi),
     .after = Permit_Avg,
     City = fct(City)
   )
@@ -173,7 +244,9 @@ housing_response_index <- total_housing_permits %>%
 ```
 
 ```{r}
-
+#| label: Housing Response Index Plot
+#| fig-width: 10
+#| fig-asp: 0.5
 ggplot(
   housing_response_index,
   aes(x = Date,
@@ -183,17 +256,25 @@ ggplot(
   geom_line(
   ) + 
   labs(
-    title = "Market Response Index",
-    y = "Monthly Housing Permits, 12-mo. Moving Avg."
+    title = "Houston and New York Lead the Charge ",
+    y = "Housing Response Index",
+    color = "City"
   ) +
   coord_cartesian(
-    xlim = c(as_date("2015-01-01"), as_date("2023-04-01"))
+    xlim = c(as_date("2017-01-01"), as_date("2023-04-01")),
+    ylim = c(0, 150)
+  ) +
+  scale_x_continuous(
+    expand = c(0,0)
   ) +
   guides(
     color = guide_legend(nrow = 9)
+  ) +
+  theme(
+    plot.title = element_text(size = 17)
   )
 
-
+ggsave(here("national-market-comparison", "plots", "HRI.png"), width = 10, height = 5)
 ```
 
 

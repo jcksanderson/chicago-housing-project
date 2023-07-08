@@ -8,14 +8,17 @@ First we'll load the packages.
 ```{r load packages, message=FALSE}
 library(tidyverse)
 library(sf)
+library(showtext)
+library(rayshader)
+library(rayrender)
+library(here)
+# font_add("Space Grotesk", "~/Library/Fonts/SpaceGrotesk-Regular.ttf")
 ```
 
 Then we'll load in our census data and turn it into a data table.
 
 ```{r}
-tracts <- st_read("SHP/SHP_chicago-tracts_housing-stock/acs2021_5yr_B25024_14000US17031010502.shp", quiet = TRUE)
-
-tracts_df <- fortify(tracts)
+tracts_df <- read_sf("SHP/SHP_chicago-tracts_housing-stock/acs2021_5yr_B25024_14000US17031010502.shp", quiet = TRUE)
 ```
 
 But these column names aren't very descriptive and some are unnecessary.
@@ -61,11 +64,13 @@ housing_units <- ggplot(tracts_average_units) +
   scale_fill_viridis_b(breaks = c(0, 3, 5, 10, 25, 50, 100), na.value = "gray10") +
   theme_void() +
   theme(
-    plot.title = element_text(family = "Space Grotesk Bold",
+    plot.title = element_text(family = "Space Grotesk",
+                              face = "bold",
                               size = 22.5, 
                               hjust = 0.5, 
                               color = "white"),
-    plot.subtitle = element_text(family = "Space Grotesk Bold",
+    plot.subtitle = element_text(family = "Space Grotesk",
+                                 face = "bold",
                                  size = 16,
                                  hjust = 0.5,
                                  color = "gray50"),
@@ -84,6 +89,84 @@ housing_units <- ggplot(tracts_average_units) +
 grid::grid.newpage()
 grid::grid.draw(grid::rectGrob(gp = grid::gpar(fill = "gray10")))
 print(housing_units, newpage = FALSE)
+```
+
+```{r}
+bounding_box <- st_bbox(tracts_average_units) # order: xmin, ymin, xmax, ymax
+
+# wasn't able to match ground_material with the plot.background
+# so I made the limits huge so that you only see plot.background
+rayshader_housing_units <- ggplot(tracts_average_units, aes(fill = average_units)) +
+  geom_sf(color = NA) +
+  scale_fill_viridis_c() +
+  coord_sf(
+    xlim = c(bounding_box[1] - 0.25, bounding_box[3] + 0.25),
+    ylim = c(bounding_box[2] - 0.25, bounding_box[4] + 0.25)
+  ) +
+  theme_void() +
+  theme(
+    legend.position = "none",
+    plot.background = element_rect(fill = "gray15",
+                                   color = "gray15")
+  )
+
+rgl::clear3d()
+
+plot_gg(
+  rayshader_housing_units,
+  solid = FALSE,
+  shadowdepth = -0.001,
+  scale = 100,
+  theta = 330,
+  phi = 45,
+  zoom = 0.3
+ )
+
+render_highquality(
+  filename = here("housing-stock_choropleth", "plots", "raytrace_test_10.png"),
+  width = 1200,
+  height = 1200,
+  samples = 1200,
+  interactive = FALSE,
+  preview = FALSE,
+  lightintensity = 1000,
+  lightdirection = 290,
+  lightaltitude = 38
+)
+```
+
+```{r}
+
+test_plot <- ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point()
+
+plot_gg(
+  test_plot,
+  solid = FALSE
+)
+
+render_snapshot()
+
+render_highquality(
+  ground_material = diffuse(color = "gray10")
+)
+```
+
+```{r}
+montereybay %>%
+    sphere_shade(zscale = 10, texture = "imhof1") %>%
+    plot_3d(montereybay, zscale = 50, fov = 70, theta = 270, phi = 30, 
+            windowsize = c(1000, 800), zoom = 0.6,  
+            water = TRUE, waterdepth = 0, wateralpha = 0.5, watercolor = "#233aa1",
+            waterlinecolor = "white", waterlinealpha = 0.5)
+Sys.sleep(0.2)
+render_highquality(lightdirection = c(-45,45), 
+                   lightaltitude  = 30, 
+                   clamp_value = 10, 
+                   samples = 256, 
+                   camera_lookat= c(0,-50,0),
+                   ground_material = diffuse(color="grey50",checkercolor = "grey20", checkerperiod = 100),
+                   clear = TRUE)
 ```
 
 
