@@ -18,7 +18,12 @@ library(here)
 Then we'll load in our census data and turn it into a data table.
 
 ```{r}
-tracts_df <- read_sf("data/SHP_chicago-tracts_housing-stock/acs2021_5yr_B25024_14000US17031010502.shp", quiet = TRUE)
+tracts_df <- read_sf(here(
+  "data", 
+  "SHP_chicago-tracts_housing-stock",
+  "acs2021_5yr_B25024_14000US17031010502.shp"
+  ), quiet = TRUE
+)
 ```
 
 But these column names aren't very descriptive and some are unnecessary.
@@ -102,7 +107,12 @@ housing_units <- ggplot(tracts_average_units) +
   )
 grid::grid.newpage()
 grid::grid.draw(grid::rectGrob(gp = grid::gpar(fill = "gray10")))
-print(housing_units, newpage = FALSE)
+final_plot <- print(housing_units, newpage = FALSE)
+
+ggsave(here("housing-stock_choropleth/plots/housing-stock_choropleth.png"), 
+       plot = final_plot, 
+       width = 8, 
+       height = 5)
 ```
 
 ```{r}
